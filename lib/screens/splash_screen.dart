@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'login_screen.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/app_routes.dart';
 
 /// SplashScreen is the first screen users see when opening the app
@@ -14,7 +13,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -32,16 +31,20 @@ class _SplashScreenState extends State<SplashScreen> {
     
     if (!mounted) return;
 
+    // TODO: Uncomment Firebase auth check when config files are added
     // Check if user is logged in
-    final User? user = _auth.currentUser;
+    // final User? user = _auth.currentUser;
     
-    if (user != null) {
-      // User is logged in - redirect to caregiver dashboard
-      Navigator.pushReplacementNamed(context, AppRoutes.caregiverDashboard);
-    } else {
-      // No user logged in - redirect to login screen
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
-    }
+    // if (user != null) {
+    //   // User is logged in - redirect to caregiver dashboard
+    //   Navigator.pushReplacementNamed(context, AppRoutes.caregiverDashboard);
+    // } else {
+    //   // No user logged in - redirect to login screen
+    //   Navigator.pushReplacementNamed(context, AppRoutes.login);
+    // }
+    
+    // For now, redirect to login screen (Firebase disabled)
+    Navigator.pushReplacementNamed(context, AppRoutes.login);
   }
 
   @override

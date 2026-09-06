@@ -5,8 +5,6 @@ import '../models/session_model.dart';
 /// FirestoreService handles all Cloud Firestore database operations
 /// This service manages data for users (patients) and game sessions
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
   // Collection references
   final CollectionReference _usersCollection = 
       FirebaseFirestore.instance.collection('users');

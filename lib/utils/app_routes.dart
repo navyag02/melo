@@ -7,9 +7,9 @@ class AppRoutes {
   static const String home = '/home';
   static const String gameSelection = '/game-selection';
   static const String caregiverDashboard = '/caregiver-dashboard';
+  static const String memoryMatchGame = '/memory-match-game';
   
   // Future routes (to be implemented later)
-  // static const String memoryGame = '/memory-game';
   // static const String wordPuzzle = '/word-puzzle';
   // static const String reminders = '/reminders';
   // static const String patientProfile = '/patient-profile';

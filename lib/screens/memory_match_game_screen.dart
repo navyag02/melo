@@ -1,0 +1,988 @@
+import 'package:flutter/material.dart';
+import 'dart:math';
+// import '../services/firestore_service.dart';
+import '../models/session_model.dart';
+import '../services/difficulty_engine.dart';
+
+/// MemoryMatchGameScreen - A cultural memory matching game themed around
+/// North Eastern Region (NER) of India
+/// 
+/// This game helps elderly patients with cognitive exercises while celebrating
+/// the rich cultural heritage of India's North Eastern Region.
+/// 
+/// Cultural Note: The card themes represent significant cultural elements from NER:
+/// - Bihu dance/Gamosa (Assam)
+/// - Hornbill (Nagaland - state bird, Hornbill Festival)
+/// - Bamboo handicrafts (across NER)
+/// - Tea gardens (Assam)
+/// - Living root bridges (Meghalaya)
+/// - Traditional textiles/handloom (across NER)
+class MemoryMatchGameScreen extends StatefulWidget {
+  const MemoryMatchGameScreen({super.key});
+
+  @override
+  State<MemoryMatchGameScreen> createState() => _MemoryMatchGameState();
+}
+
+class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
+    with SingleTickerProviderStateMixin {
+  // Game state
+  List<CardModel> cards = [];
+  List<CardModel> flippedCards = [];
+  bool isCheckingMatch = false;
+  int moves = 0;
+  int matchesFound = 0;
+  int totalPairs = 6; // Will be set by adaptive difficulty engine
+  Stopwatch stopwatch = Stopwatch();
+  bool gameCompleted = false;
+
+  // Adaptive difficulty state
+  DifficultyEngine.DifficultyLevel currentDifficulty = DifficultyEngine.DifficultyLevel.medium;
+  DifficultyEngine.DifficultyLevel nextDifficulty = DifficultyEngine.DifficultyLevel.medium;
+  String difficultyChangeMessage = '';
+
+  // Firebase
+  // final FirestoreService _firestoreService = FirestoreService();
+
+  // Cultural card themes - NER themed icons with regional language labels
+  // TODO: Replace with verified, culturally-approved illustrations before final submission
+  // TODO: Verify translations with native speakers before demo day
+  final List<CulturalCardTheme> culturalThemes = [
+    CulturalCardTheme(
+      id: 'bihu',
+      name: 'Bihu Dance',
+      regionalName: 'বিহু নৃত্য', // Assamese - TODO: verify translation
+      icon: Icons.music_note, // TODO: Replace with Bihu dancer illustration
+      color: Colors.red,
+      description: 'Traditional Assamese dance',
+    ),
+    CulturalCardTheme(
+      id: 'hornbill',
+      name: 'Hornbill',
+      regionalName: 'হৰ্নিল', // Assamese approximation - TODO: verify translation
+      icon: Icons.flutter_dash, // TODO: Replace with Hornbill bird illustration
+      color: Colors.green,
+      description: 'State bird of Nagaland',
+    ),
+    CulturalCardTheme(
+      id: 'bamboo',
+      name: 'Bamboo Craft',
+      regionalName: 'বাঁহ শিল্প', // Assamese - TODO: verify translation
+      icon: Icons.grass, // TODO: Replace with bamboo handicraft illustration
+      color: Colors.lightGreen,
+      description: 'Traditional bamboo handicrafts',
+    ),
+    CulturalCardTheme(
+      id: 'tea',
+      name: 'Tea Garden',
+      regionalName: 'চাহ বাগিছা', // Assamese - TODO: verify translation
+      icon: Icons.local_florist, // TODO: Replace with tea leaf illustration
+      color: Colors.brown,
+      description: 'Assam tea gardens',
+    ),
+    CulturalCardTheme(
+      id: 'root_bridge',
+      name: 'Root Bridge',
+      regionalName: 'শিপা সেতু', // Assamese approximation - TODO: verify translation
+      icon: Icons.water, // TODO: Replace with living root bridge illustration
+      color: Colors.amber,
+      description: 'Living root bridges of Meghalaya',
+    ),
+    CulturalCardTheme(
+      id: 'textile',
+      name: 'Traditional Textile',
+      regionalName: 'আদৰৰ কাপোৰ', // Assamese - TODO: verify translation
+      icon: Icons.checkroom, // TODO: Replace with traditional textile pattern
+      color: Colors.purple,
+      description: 'NER handloom textiles',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeGame();
+  }
+
+  /// Initialize the game with adaptive difficulty
+  /// This is where our AI adaptive difficulty engine comes into play
+  Future<void> _initializeGame() async {
+    // STEP 1: Calculate appropriate difficulty using the AI engine
+    // TODO: Uncomment when Firebase is configured
+    // List<SessionModel> recentSessions = await _getRecentSessions();
+    // nextDifficulty = DifficultyEngine.calculateNextDifficulty(
+    //   recentSessions: recentSessions,
+    //   currentDifficulty: currentDifficulty,
+    // );
+    
+    // For now, use default medium difficulty (Firebase disabled)
+    nextDifficulty = DifficultyEngine.DifficultyLevel.medium;
+    
+    // STEP 2: Get the number of pairs for the calculated difficulty
+    totalPairs = DifficultyEngine.getPairsForDifficulty(nextDifficulty);
+    
+    // STEP 3: Generate difficulty change message
+    difficultyChangeMessage = DifficultyEngine.getDifficultyChangeMessage(
+      oldDifficulty: currentDifficulty,
+      newDifficulty: nextDifficulty,
+    );
+    
+    print('Adaptive Difficulty Engine: Starting game with ${DifficultyEngine.getDifficultyName(nextDifficulty)}');
+    
+    // STEP 4: Create cards based on the calculated difficulty
+    _createCardsForDifficulty();
+    
+    // STEP 5: Reset game state
+    setState(() {
+      moves = 0;
+      matchesFound = 0;
+      flippedCards = [];
+      isCheckingMatch = false;
+      gameCompleted = false;
+      stopwatch.reset();
+      stopwatch.start();
+    });
+  }
+
+  /// Create cards based on the current difficulty level
+  void _createCardsForDifficulty() {
+    List<CardModel> gameCards = [];
+    
+    // Determine how many cultural themes to use based on difficulty
+    int themesToUse = totalPairs;
+    
+    // If we need more themes than available, cycle through them
+    for (int i = 0; i < themesToUse; i++) {
+      // Use themes cyclically if we need more than available
+      CulturalCardTheme theme = culturalThemes[i % culturalThemes.length];
+      
+      // Add two cards for each theme (the pair)
+      gameCards.add(CardModel(theme: theme, id: '${theme.id}_${i}_1'));
+      gameCards.add(CardModel(theme: theme, id: '${theme.id}_${i}_2'));
+    }
+
+    // Shuffle the cards
+    gameCards.shuffle(Random());
+
+    setState(() {
+      cards = gameCards;
+    });
+  }
+
+  /// Fetch recent sessions from Firestore for adaptive difficulty
+  /// TODO: Implement when Firebase is configured
+  Future<List<SessionModel>> _getRecentSessions() async {
+    try {
+      // TODO: Uncomment when Firebase is configured
+      // final patientId = 'placeholder_patient_id'; // Replace with actual patient ID
+      // return await _firestoreService.getRecentSessionsForGame(
+      //   patientId,
+      //   'memory_matching_ner',
+      //   limit: 3,
+      // );
+      
+      // For now, return empty list (Firebase disabled)
+      return [];
+    } catch (e) {
+      print('Error fetching recent sessions: $e');
+      return [];
+    }
+  }
+
+  /// Handle card tap - flip card and check for matches
+  void _handleCardTap(CardModel card) {
+    // Don't allow interaction if game is checking match or completed
+    if (isCheckingMatch || gameCompleted) return;
+    
+    // Don't allow flipping already matched or flipped cards
+    if (card.isMatched || card.isFlipped) return;
+
+    // Don't allow more than 2 cards flipped at once
+    if (flippedCards.length >= 2) return;
+
+    // Flip the card
+    setState(() {
+      card.isFlipped = true;
+      flippedCards.add(card);
+    });
+
+    // Check for match when 2 cards are flipped
+    if (flippedCards.length == 2) {
+      moves++;
+      _checkForMatch();
+    }
+  }
+
+  /// Check if the two flipped cards match
+  void _checkForMatch() {
+    setState(() {
+      isCheckingMatch = true;
+    });
+
+    CardModel card1 = flippedCards[0];
+    CardModel card2 = flippedCards[1];
+
+    if (card1.theme.id == card2.theme.id) {
+      // Match found!
+      setState(() {
+        card1.isMatched = true;
+        card2.isMatched = true;
+        matchesFound++;
+        flippedCards = [];
+        isCheckingMatch = false;
+      });
+
+      // Check if game is complete
+      if (matchesFound == totalPairs) {
+        _handleGameComplete();
+      }
+    } else {
+      // No match - flip back after delay
+      Future.delayed(const Duration(seconds: 1), () {
+        setState(() {
+          card1.isFlipped = false;
+          card2.isFlipped = false;
+          flippedCards = [];
+          isCheckingMatch = false;
+        });
+      });
+    }
+  }
+
+  /// Handle game completion - save to Firestore and show results
+  void _handleGameComplete() {
+    stopwatch.stop();
+    
+    // STEP 1: Calculate the next difficulty based on this session's performance
+    // This is where the AI adaptive logic happens after each round
+    double accuracy = matchesFound / max(moves, 1);
+    
+    // Create a temporary session model for difficulty calculation
+    SessionModel tempSession = SessionModel(
+      patientId: 'placeholder_patient_id',
+      gameType: 'memory_matching_ner',
+      score: matchesFound * 100,
+      accuracy: accuracy,
+      timestamp: DateTime.now(),
+      durationSeconds: stopwatch.elapsed.inSeconds,
+      difficultyLevel: DifficultyEngine.difficultyToString(currentDifficulty),
+    );
+    
+    // TODO: Uncomment when Firebase is configured to get actual recent sessions
+    // For now, use simple logic based on current session only
+    // List<SessionModel> recentSessions = await _getRecentSessions();
+    // recentSessions.insert(0, tempSession); // Add current session to beginning
+    
+    // Calculate next difficulty using the AI engine
+    // For demo purposes, use simple threshold logic
+    if (accuracy >= DifficultyEngine.increaseThreshold) {
+      nextDifficulty = DifficultyEngine.DifficultyLevel.hard;
+    } else if (accuracy <= DifficultyEngine.decreaseThreshold) {
+      nextDifficulty = DifficultyEngine.DifficultyLevel.easy;
+    } else {
+      nextDifficulty = currentDifficulty;
+    }
+    
+    // Generate the difficulty change message
+    difficultyChangeMessage = DifficultyEngine.getDifficultyChangeMessage(
+      oldDifficulty: currentDifficulty,
+      newDifficulty: nextDifficulty,
+    );
+    
+    print('Adaptive Difficulty Engine: Session completed with ${(accuracy * 100).toStringAsFixed(1)}% accuracy');
+    print('Adaptive Difficulty Engine: Current difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty)}');
+    print('Adaptive Difficulty Engine: Next difficulty: ${DifficultyEngine.getDifficultyName(nextDifficulty)}');
+    print('Adaptive Difficulty Engine: Message: $difficultyChangeMessage');
+    
+    setState(() {
+      gameCompleted = true;
+    });
+
+    // Save session to Firestore
+    _saveGameSession(accuracy);
+  }
+
+  /// Save the game session to Firestore
+  Future<void> _saveGameSession(double accuracy) async {
+    try {
+      // TODO: Implement Firebase saving when config files are added
+      // Calculate accuracy (matches found / total moves)
+      // Minimum possible moves = totalPairs (perfect game)
+      
+      // Create session model with adaptive difficulty information
+      SessionModel session = SessionModel(
+        patientId: 'placeholder_patient_id', // TODO: Replace with actual patient ID
+        gameType: 'memory_matching_ner',
+        score: matchesFound * 100, // Simple scoring: 100 points per match
+        accuracy: accuracy,
+        timestamp: DateTime.now(),
+        durationSeconds: stopwatch.elapsed.inSeconds,
+        difficultyLevel: DifficultyEngine.difficultyToString(currentDifficulty),
+        additionalData: {
+          'totalPairs': totalPairs,
+          'moves': moves,
+          'culturalThemes': culturalThemes.map((t) => t.id).toList(),
+          'adaptiveDifficulty': {
+            'currentLevel': DifficultyEngine.difficultyToString(currentDifficulty),
+            'nextLevel': DifficultyEngine.difficultyToString(nextDifficulty),
+            'changeMessage': difficultyChangeMessage,
+          },
+        },
+      );
+
+      // Save to Firestore
+      // await _firestoreService.createSession(session);
+      
+      print('Game session completed - Score: ${matchesFound * 100}, Moves: $moves, Time: ${stopwatch.elapsed.inSeconds}s');
+      print('Adaptive Difficulty: ${DifficultyEngine.difficultyToString(currentDifficulty)} -> ${DifficultyEngine.difficultyToString(nextDifficulty)}');
+    } catch (e) {
+      print('Error in game session: $e');
+      // Continue even if save fails - don't block user experience
+    }
+  }
+
+  @override
+  void dispose() {
+    stopwatch.stop();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF8E1), // Consistent warm background
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF4CAF50),
+        title: const Text(
+          'Memory Match - NER Culture',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
+          onPressed: () {
+            // Confirm exit if game is in progress
+            if (!gameCompleted && moves > 0) {
+              _showExitConfirmation();
+            } else {
+              Navigator.pop(context);
+            }
+          },
+        ),
+        actions: [
+          // Restart button
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white, size: 32),
+            onPressed: () {
+              _showRestartConfirmation();
+            },
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: gameCompleted
+            ? _buildRoundCompleteScreen()
+            : _buildGameScreen(),
+      ),
+    );
+  }
+
+  /// Build the main game screen
+  Widget _buildGameScreen() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // Game stats header
+          _buildGameStats(),
+          const SizedBox(height: 20),
+          
+          // Game grid
+          Expanded(
+            child: _buildCardGrid(),
+          ),
+          
+          // Cultural info button
+          _buildCulturalInfoButton(),
+        ],
+      ),
+    );
+  }
+
+  /// Build the game statistics header
+  Widget _buildGameStats() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 2,
+            blurRadius: 4,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Difficulty indicator
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.psychology, color: Color(0xFF4CAF50), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty)}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4CAF50),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Game stats
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem('Moves', '$moves/$totalPairs', Icons.touch_app),
+              _buildStatItem('Matches', '$matchesFound/$totalPairs', Icons.check_circle),
+              _buildStatItem('Time', _formatTime(stopwatch.elapsed), Icons.timer),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build individual stat item
+  Widget _buildStatItem(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, size: 28, color: const Color(0xFF4CAF50)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF333333),
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF666666),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build the card grid
+  Widget _buildCardGrid() {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, // 3 columns for 12 cards (4 rows)
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.8, // Slightly taller cards
+      ),
+      itemCount: cards.length,
+      itemBuilder: (context, index) {
+        return _buildCard(cards[index]);
+      },
+    );
+  }
+
+  /// Build individual card
+  Widget _buildCard(CardModel card) {
+    return GestureDetector(
+      onTap: () => _handleCardTap(card),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: card.isFlipped || card.isMatched
+            ? _buildCardFront(card)
+            : _buildCardBack(),
+      ),
+    );
+  }
+
+  /// Build the front of the card (when flipped)
+  Widget _buildCardFront(CardModel card) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: card.isMatched ? Colors.green : Colors.grey,
+          width: card.isMatched ? 3 : 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Cultural icon
+          Icon(
+            card.theme.icon,
+            size: 48,
+            color: card.theme.color,
+          ),
+          const SizedBox(height: 8),
+          // Theme name
+          Text(
+            card.theme.name,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF333333),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          // Regional language name
+          Text(
+            card.theme.regionalName,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF666666),
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build the back of the card (when face down)
+  Widget _buildCardBack() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.help_outline,
+          size: 48,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  /// Build cultural info button
+  Widget _buildCulturalInfoButton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: ElevatedButton.icon(
+        onPressed: _showCulturalInfo,
+        icon: const Icon(Icons.info_outline, size: 28),
+        label: const Text(
+          'Learn About NER Culture',
+          style: TextStyle(fontSize: 20),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2196F3),
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 60),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build the round complete screen
+  Widget _buildRoundCompleteScreen() {
+    double accuracy = matchesFound / max(moves, 1);
+    int score = matchesFound * 100;
+
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Success icon
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.celebration,
+              size: 64,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Congratulations text
+          const Text(
+            'Round Complete!',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Score card
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 2,
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildResultRow('Score', '$score', Icons.star, Colors.amber),
+                const SizedBox(height: 16),
+                _buildResultRow('Moves', '$moves', Icons.touch_app, Colors.blue),
+                const SizedBox(height: 16),
+                _buildResultRow('Time', _formatTime(stopwatch.elapsed), Icons.timer, Colors.green),
+                const SizedBox(height: 16),
+                _buildResultRow('Accuracy', '${(accuracy * 100).toStringAsFixed(0)}%', Icons.check_circle, Colors.purple),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Adaptive difficulty message (AI transparency)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF4CAF50), width: 2),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.psychology,
+                  color: Color(0xFF4CAF50),
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'AI Adaptive Difficulty',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2E7D32),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        difficultyChangeMessage,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF388E3C),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Update current difficulty to next difficulty for the new round
+                    currentDifficulty = nextDifficulty;
+                    _initializeGame();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4CAF50),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 60),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Play Again (${DifficultyEngine.getPairsForDifficulty(nextDifficulty)} pairs)',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2196F3),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 60),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Back to Menu',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build result row for summary screen
+  Widget _buildResultRow(String label, String value, IconData icon, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 20,
+                color: Color(0xFF666666),
+              ),
+            ),
+          ],
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF333333),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Show cultural information dialog
+  void _showCulturalInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'NER Cultural Themes',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: culturalThemes.map((theme) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(theme.icon, color: theme.color, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          theme.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          theme.regionalName,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                        Text(
+                          theme.description,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Close',
+              style: TextStyle(fontSize: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show exit confirmation dialog
+  void _showExitConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Exit Game?',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Your progress will be lost. Are you sure you want to exit?',
+          style: TextStyle(fontSize: 18),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontSize: 18),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            child: const Text(
+              'Exit',
+              style: TextStyle(fontSize: 18, color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show restart confirmation dialog
+  void _showRestartConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Restart Game?',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Your current progress will be lost. Are you sure you want to restart?',
+          style: TextStyle(fontSize: 18),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontSize: 18),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _initializeGame();
+            },
+            child: const Text(
+              'Restart',
+              style: TextStyle(fontSize: 18, color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Format duration as MM:SS
+  String _formatTime(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+}
+
+/// Model for a cultural card theme
+class CulturalCardTheme {
+  final String id;
+  final String name;
+  final String regionalName;
+  final IconData icon;
+  final Color color;
+  final String description;
+
+  CulturalCardTheme({
+    required this.id,
+    required this.name,
+    required this.regionalName,
+    required this.icon,
+    required this.color,
+    required this.description,
+  });
+}
+
+/// Model for a game card
+class CardModel {
+  final CulturalCardTheme theme;
+  final String id;
+  bool isFlipped;
+  bool isMatched;
+
+  CardModel({
+    required this.theme,
+    required this.id,
+    this.isFlipped = false,
+    this.isMatched = false,
+  });
+}

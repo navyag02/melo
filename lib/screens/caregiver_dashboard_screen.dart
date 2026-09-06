@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/auth_service.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import '../services/auth_service.dart';
 import '../utils/app_routes.dart';
 
 /// CaregiverDashboardScreen is the main interface for caregivers
@@ -14,12 +14,14 @@ class CaregiverDashboardScreen extends StatefulWidget {
 }
 
 class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
-  final AuthService _authService = AuthService();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // final AuthService _authService = AuthService();
+  // final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   Widget build(BuildContext context) {
-    final User? currentUser = _auth.currentUser;
+    // TODO: Uncomment when Firebase is configured
+    // final User? currentUser = _auth.currentUser;
+    final String currentUserEmail = 'caregiver@example.com'; // Placeholder
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -66,7 +68,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Logged in as: ${currentUser?.email ?? "Unknown"}',
+                        'Logged in as: $currentUserEmail',
                         style: const TextStyle(
                           fontSize: 18,
                           color: Color(0xFF666666),
@@ -225,7 +227,12 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
   /// Handle logout process
   Future<void> _handleLogout() async {
     try {
-      await _authService.logout();
+      // TODO: Uncomment Firebase logout when config files are added
+      // await _authService.logout();
+      
+      // Simulate logout for testing
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.login);
       }

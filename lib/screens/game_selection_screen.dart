@@ -59,7 +59,7 @@ class GameSelectionScreen extends StatelessWidget {
                       icon: Icons.style,
                       color: const Color(0xFFE91E63), // Pink
                       onTap: () {
-                        _showComingSoonMessage(context, 'Memory Match');
+                        Navigator.pushNamed(context, AppRoutes.memoryMatchGame);
                       },
                     ),
                     const SizedBox(height: 20),

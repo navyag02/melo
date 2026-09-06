@@ -8,7 +8,8 @@ class SessionModel {
   final double accuracy; // Accuracy percentage (0.0 to 1.0)
   final DateTime timestamp; // When the session was played
   final int durationSeconds; // How long the session lasted in seconds
-  final int? level; // Optional: difficulty level reached
+  final int? level; // Optional: difficulty level reached (legacy, use difficultyLevel instead)
+  final String? difficultyLevel; // AI adaptive difficulty: 'easy', 'medium', 'hard'
   final Map<String, dynamic>? additionalData; // Optional: game-specific data
 
   SessionModel({
@@ -20,6 +21,7 @@ class SessionModel {
     required this.timestamp,
     required this.durationSeconds,
     this.level,
+    this.difficultyLevel,
     this.additionalData,
   });
 
@@ -36,6 +38,7 @@ class SessionModel {
           : DateTime.parse(map['timestamp'] as String),
       durationSeconds: map['durationSeconds'] as int,
       level: map['level'] as int?,
+      difficultyLevel: map['difficultyLevel'] as String?,
       additionalData: map['additionalData'] as Map<String, dynamic>?,
     );
   }
@@ -51,6 +54,7 @@ class SessionModel {
       'timestamp': timestamp.toIso8601String(),
       'durationSeconds': durationSeconds,
       'level': level,
+      'difficultyLevel': difficultyLevel,
       'additionalData': additionalData,
     };
   }
@@ -65,6 +69,7 @@ class SessionModel {
     DateTime? timestamp,
     int? durationSeconds,
     int? level,
+    String? difficultyLevel,
     Map<String, dynamic>? additionalData,
   }) {
     return SessionModel(
@@ -76,6 +81,7 @@ class SessionModel {
       timestamp: timestamp ?? this.timestamp,
       durationSeconds: durationSeconds ?? this.durationSeconds,
       level: level ?? this.level,
+      difficultyLevel: difficultyLevel ?? this.difficultyLevel,
       additionalData: additionalData ?? this.additionalData,
     );
   }

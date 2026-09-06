@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_core/firebase_core.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/game_selection_screen.dart';
 import 'screens/caregiver_dashboard_screen.dart';
+import 'screens/memory_match_game_screen.dart';
 import 'utils/app_routes.dart';
 
 /// Main entry point for the Melo application
@@ -18,7 +19,8 @@ void main() async {
   // - android/app/google-services.json
   // - ios/Runner/GoogleService-Info.plist
   // Get these from Firebase Console after creating your project
-  await Firebase.initializeApp();
+  // TODO: Uncomment Firebase initialization when config files are added
+  // await Firebase.initializeApp();
   
   runApp(const MeloApp());
 }
@@ -84,6 +86,7 @@ class MeloApp extends StatelessWidget {
         AppRoutes.home: (context) => const HomeScreen(),
         AppRoutes.gameSelection: (context) => const GameSelectionScreen(),
         AppRoutes.caregiverDashboard: (context) => const CaregiverDashboardScreen(),
+        AppRoutes.memoryMatchGame: (context) => const MemoryMatchGameScreen(),
       },
     );
   }

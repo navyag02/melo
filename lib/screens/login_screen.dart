@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/auth_service.dart';
+// import '../services/auth_service.dart';
 import '../utils/app_routes.dart';
 
 /// LoginScreen handles caregiver authentication
@@ -17,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+  // final AuthService _authService = AuthService();
   
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -40,10 +39,14 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _authService.loginCaregiver(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      // TODO: Uncomment Firebase auth when config files are added
+      // await _authService.loginCaregiver(
+      //   _emailController.text.trim(),
+      //   _passwordController.text,
+      // );
+      
+      // Simulate login for testing
+      await Future.delayed(const Duration(seconds: 1));
       
       if (mounted) {
         // Login successful - navigate to caregiver dashboard
