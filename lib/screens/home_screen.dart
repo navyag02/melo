@@ -68,14 +68,14 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 30),
                     
-                    // Reminders button (placeholder for now)
+                    // Reminders button
                     _buildLargeButton(
                       context,
                       title: 'Reminders',
                       icon: Icons.alarm,
                       color: const Color(0xFFFF9800), // Orange
                       onTap: () {
-                        _showComingSoonMessage(context);
+                        Navigator.pushNamed(context, AppRoutes.reminders);
                       },
                     ),
                     const SizedBox(height: 30),

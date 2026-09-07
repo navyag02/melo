@@ -1,16 +1,15 @@
 /// AppRoutes defines all the navigation routes for the Melo application
 /// This centralizes route names for easy maintenance
 class AppRoutes {
-  // Route names - these are used throughout the app for navigation
   static const String splash = '/splash';
   static const String login = '/login';
+  static const String signup = '/signup';
+  static const String addPatient = '/add-patient';
+  static const String patientSelector = '/patient-selector';
   static const String home = '/home';
   static const String gameSelection = '/game-selection';
   static const String caregiverDashboard = '/caregiver-dashboard';
   static const String memoryMatchGame = '/memory-match-game';
-  
-  // Future routes (to be implemented later)
-  // static const String wordPuzzle = '/word-puzzle';
-  // static const String reminders = '/reminders';
-  // static const String patientProfile = '/patient-profile';
+  static const String reminders = '/reminders'; // FIX: added for reminders feature
+  static const String dailyRoutineRecall = '/daily-routine-recall'; // new game
 }

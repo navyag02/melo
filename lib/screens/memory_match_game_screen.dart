@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-// import '../services/firestore_service.dart';
+import '../services/firestore_service.dart';
 import '../models/session_model.dart';
 import '../services/difficulty_engine.dart';
+import '../services/patient_service.dart';
 
 /// MemoryMatchGameScreen - A cultural memory matching game themed around
 /// North Eastern Region (NER) of India
@@ -37,12 +38,18 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
   bool gameCompleted = false;
 
   // Adaptive difficulty state
-  DifficultyEngine.DifficultyLevel currentDifficulty = DifficultyEngine.DifficultyLevel.medium;
-  DifficultyEngine.DifficultyLevel nextDifficulty = DifficultyEngine.DifficultyLevel.medium;
+  DifficultyLevel currentDifficulty = DifficultyLevel.medium;
+  DifficultyLevel nextDifficulty = DifficultyLevel.medium;
   String difficultyChangeMessage = '';
 
   // Firebase
-  // final FirestoreService _firestoreService = FirestoreService();
+  final FirestoreService _firestoreService = FirestoreService();
+  final PatientService _patientService = PatientService();
+
+  // FIX: the real patient ID, loaded from local storage (set when a
+  // caregiver selects a patient). Sessions and difficulty lookups now use
+  // this instead of the old hardcoded 'placeholder_patient_id'.
+  String? _patientId;
 
   // Cultural card themes - NER themed icons with regional language labels
   // TODO: Replace with verified, culturally-approved illustrations before final submission
@@ -102,30 +109,50 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
   void initState() {
     super.initState();
     // Initialize with default difficulty for first round
-    currentDifficulty = DifficultyEngine.DifficultyLevel.medium;
-    nextDifficulty = DifficultyEngine.DifficultyLevel.medium;
+    currentDifficulty = DifficultyLevel.medium;
+    nextDifficulty = DifficultyLevel.medium;
     _initializeGame();
   }
 
   /// Initialize the game with adaptive difficulty
   /// This is where our AI adaptive difficulty engine comes into play
-  void _initializeGame() {
-    // STEP 1: Use the nextDifficulty as the current difficulty for this round
+  Future<void> _initializeGame() async {
+    // STEP 0 (FIX): Load the actual selected patient ID from local storage.
+    // This was previously skipped, so every session saved under a fake
+    // placeholder ID and the difficulty engine could never see real history.
+    _patientId = await _patientService.getSelectedPatientId();
+    if (_patientId == null) {
+      // No patient selected yet — this shouldn't normally happen since the
+      // caregiver flow selects a patient before reaching this screen, but
+      // we fall back safely instead of crashing.
+      print('Warning: No patient selected. Using fallback ID for this session.');
+      _patientId = 'unknown_patient';
+    }
+
+    // STEP 1: Calculate appropriate difficulty using the AI engine
+    List<SessionModel> recentSessions = await _getRecentSessions();
+    nextDifficulty = DifficultyEngine.calculateNextDifficulty(
+      recentSessions: recentSessions,
+      currentDifficulty: currentDifficulty,
+    );
+    
+    // STEP 2: Use the nextDifficulty as the current difficulty for this round
     currentDifficulty = nextDifficulty;
     
-    // STEP 2: Get the number of pairs for the calculated difficulty
+    // STEP 3: Get the number of pairs for the calculated difficulty
     totalPairs = DifficultyEngine.getPairsForDifficulty(currentDifficulty);
     
-    // STEP 3: Generate initial difficulty message (will be updated after round completes)
+    // STEP 4: Generate initial difficulty message (will be updated after round completes)
     difficultyChangeMessage = 'Current difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty)}';
     
     print('Adaptive Difficulty Engine: Starting game with ${DifficultyEngine.getDifficultyName(currentDifficulty)}');
     print('Adaptive Difficulty Engine: Total pairs: $totalPairs');
+    print('Adaptive Difficulty Engine: Recent sessions analyzed: ${recentSessions.length}');
     
-    // STEP 4: Create cards based on the calculated difficulty
+    // STEP 5: Create cards based on the calculated difficulty
     _createCardsForDifficulty();
     
-    // STEP 5: Reset game state
+    // STEP 6: Reset game state
     setState(() {
       moves = 0;
       matchesFound = 0;
@@ -163,19 +190,16 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
   }
 
   /// Fetch recent sessions from Firestore for adaptive difficulty
-  /// TODO: Implement when Firebase is configured
   Future<List<SessionModel>> _getRecentSessions() async {
     try {
-      // TODO: Uncomment when Firebase is configured
-      // final patientId = 'placeholder_patient_id'; // Replace with actual patient ID
-      // return await _firestoreService.getRecentSessionsForGame(
-      //   patientId,
-      //   'memory_matching_ner',
-      //   limit: 3,
-      // );
-      
-      // For now, return empty list (Firebase disabled)
-      return [];
+      // FIX: use the real patient ID loaded in _initializeGame instead of
+      // a hardcoded placeholder.
+      final patientId = _patientId ?? 'unknown_patient';
+      return await _firestoreService.getRecentSessionsForGame(
+        patientId,
+        'memory_matching_ner',
+        limit: 3,
+      );
     } catch (e) {
       print('Error fetching recent sessions: $e');
       return [];
@@ -252,7 +276,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
     
     // Create a temporary session model for difficulty calculation
     SessionModel tempSession = SessionModel(
-      patientId: 'placeholder_patient_id',
+      patientId: _patientId ?? 'unknown_patient',
       gameType: 'memory_matching_ner',
       score: matchesFound * 100,
       accuracy: accuracy,
@@ -269,9 +293,9 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
     // Calculate next difficulty using the AI engine
     // For demo purposes, use simple threshold logic
     if (accuracy >= DifficultyEngine.increaseThreshold) {
-      nextDifficulty = DifficultyEngine.DifficultyLevel.hard;
+      nextDifficulty = DifficultyLevel.hard;
     } else if (accuracy <= DifficultyEngine.decreaseThreshold) {
-      nextDifficulty = DifficultyEngine.DifficultyLevel.easy;
+      nextDifficulty = DifficultyLevel.easy;
     } else {
       nextDifficulty = currentDifficulty;
     }
@@ -298,13 +322,12 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
   /// Save the game session to Firestore
   Future<void> _saveGameSession(double accuracy) async {
     try {
-      // TODO: Implement Firebase saving when config files are added
       // Calculate accuracy (matches found / total moves)
       // Minimum possible moves = totalPairs (perfect game)
       
       // Create session model with adaptive difficulty information
       SessionModel session = SessionModel(
-        patientId: 'placeholder_patient_id', // TODO: Replace with actual patient ID
+        patientId: _patientId ?? 'unknown_patient', // FIX: real patient ID
         gameType: 'memory_matching_ner',
         score: matchesFound * 100, // Simple scoring: 100 points per match
         accuracy: accuracy,
@@ -324,13 +347,23 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       );
 
       // Save to Firestore
-      // await _firestoreService.createSession(session);
+      await _firestoreService.createSession(session);
       
-      print('Game session completed - Score: ${matchesFound * 100}, Moves: $moves, Time: ${stopwatch.elapsed.inSeconds}s');
+      print('Game session saved successfully - Score: ${matchesFound * 100}, Moves: $moves, Time: ${stopwatch.elapsed.inSeconds}s');
       print('Adaptive Difficulty: ${DifficultyEngine.difficultyToString(currentDifficulty)} -> ${DifficultyEngine.difficultyToString(nextDifficulty)}');
     } catch (e) {
-      print('Error in game session: $e');
+      print('Error saving game session: $e');
       // Continue even if save fails - don't block user experience
+      // Show a message to the user that there was a save issue
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Session data could not be saved. Please check your internet connection.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -613,7 +646,11 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
     double accuracy = matchesFound / max(moves, 1);
     int score = matchesFound * 100;
 
-    return Padding(
+    // FIX: wrapped in SingleChildScrollView — the Column's natural height
+    // (icon + text + score card + AI message + buttons) was taller than
+    // the screen on smaller devices, causing a RenderFlex overflow.
+    // Scrolling lets all content stay reachable instead of clipping.
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

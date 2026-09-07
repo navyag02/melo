@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
+import '../services/patient_service.dart';
+import '../services/firestore_service.dart';
+import '../models/session_model.dart';
 import '../utils/app_routes.dart';
 
-/// CaregiverDashboardScreen is the main interface for caregivers
-/// This screen will eventually show patient progress, analytics, and management tools
-/// Currently a placeholder with navigation structure
+/// CaregiverDashboardScreen — the real dashboard, wired to Firestore.
+///
+/// FIX: this used to be a static placeholder with "Coming Soon" cards.
+/// It now:
+///   1. Checks whether a patient is selected (redirects to patient
+///      selector/add-patient flow if not)
+///   2. Fetches that patient's real sessions from Firestore
+///   3. Shows a simple session list (date, accuracy, difficulty)
+///   4. Shows a plain-language recommendation based on recent accuracy
 class CaregiverDashboardScreen extends StatefulWidget {
   const CaregiverDashboardScreen({super.key});
 
@@ -14,14 +23,91 @@ class CaregiverDashboardScreen extends StatefulWidget {
 }
 
 class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
-  // final AuthService _authService = AuthService();
-  // final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
+  final PatientService _patientService = PatientService();
+  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  bool _isLoading = true;
+  String? _patientId;
+  String? _patientName;
+  List<SessionModel> _sessions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  /// Load the selected patient and their sessions.
+  /// If no patient is selected yet, send the caregiver to pick/add one first.
+  Future<void> _loadDashboardData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final patientId = await _patientService.getSelectedPatientId();
+    final patientName = await _patientService.getSelectedPatientName();
+
+    if (patientId == null) {
+      // No patient selected yet — go to the selector (it will offer
+      // "Add Patient" itself if the list is empty).
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.patientSelector);
+      }
+      return;
+    }
+
+    try {
+      final sessions = await _firestoreService.getSessionsForPatient(patientId);
+      setState(() {
+        _patientId = patientId;
+        _patientName = patientName;
+        _sessions = sessions;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading dashboard sessions: $e');
+      setState(() {
+        _patientId = patientId;
+        _patientName = patientName;
+        _sessions = [];
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not load session data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Simple rule-based recommendation from the last 3 sessions' average
+  /// accuracy. Same style of transparent, explainable logic as the
+  /// difficulty engine — no black-box model.
+  String _getRecommendation() {
+    if (_sessions.isEmpty) {
+      return 'No sessions yet — encourage the patient to play their first game.';
+    }
+
+    final recent = _sessions.take(3).toList();
+    final avgAccuracy = recent.map((s) => s.accuracy).reduce((a, b) => a + b) / recent.length;
+
+    if (avgAccuracy < 0.5) {
+      return 'Recommend: Easier sessions, more frequent practice.';
+    } else if (avgAccuracy > 0.8) {
+      return 'Recommend: Increase difficulty — patient is progressing well.';
+    } else {
+      return 'Recommend: Continue current routine.';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Uncomment when Firebase is configured
-    // final User? currentUser = _auth.currentUser;
-    final String currentUserEmail = 'caregiver@example.com'; // Placeholder
+    final User? currentUser = _auth.currentUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -29,15 +115,18 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
         backgroundColor: const Color(0xFF4CAF50),
         title: const Text(
           'Caregiver Dashboard',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         actions: [
-          // Logout button
+          // Switch patient button
+          IconButton(
+            icon: const Icon(Icons.people, color: Colors.white, size: 28),
+            tooltip: 'Switch Patient',
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.patientSelector);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white, size: 28),
             onPressed: _handleLogout,
@@ -45,181 +134,133 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Welcome message with caregiver email
-              Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Welcome, Caregiver!',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF333333),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Logged in as: $currentUserEmail',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Color(0xFF666666),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
-              
-              // Dashboard placeholder text
-              const Text(
-                'Dashboard Features (Coming Soon):',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF333333),
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Feature placeholders
-              Expanded(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadDashboardData,
                 child: ListView(
+                  padding: const EdgeInsets.all(20.0),
                   children: [
-                    _buildFeatureCard(
-                      'Patient Management',
-                      'Add and manage patient profiles',
-                      Icons.people,
-                      const Color(0xFF2196F3),
+                    // Header card
+                    Card(
+                      elevation: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Patient: ${_patientName ?? "Unknown"}',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF333333),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Logged in as: ${currentUser?.email ?? "Unknown"}',
+                              style: const TextStyle(fontSize: 16, color: Color(0xFF666666)),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    _buildFeatureCard(
-                      'Progress Analytics',
-                      'View patient performance and trends',
-                      Icons.analytics,
-                      const Color(0xFF9C27B0),
+                    const SizedBox(height: 20),
+
+                    // Recommendation card (AI-driven, explainable)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF4CAF50), width: 2),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.psychology, color: Color(0xFF4CAF50), size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Recommendation',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2E7D32),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _getRecommendation(),
+                                  style: const TextStyle(fontSize: 16, color: Color(0xFF388E3C)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    _buildFeatureCard(
+                    const SizedBox(height: 24),
+
+                    // Session history
+                    const Text(
                       'Session History',
-                      'Review past game sessions',
-                      Icons.history,
-                      const Color(0xFFFF9800),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
                     ),
-                    const SizedBox(height: 16),
-                    _buildFeatureCard(
-                      'Game Settings',
-                      'Customize game difficulty and parameters',
-                      Icons.settings,
-                      const Color(0xFF607D8B),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFeatureCard(
-                      'Reports',
-                      'Generate progress reports',
-                      Icons.assessment,
-                      const Color(0xFF795548),
+                    const SizedBox(height: 12),
+
+                    if (_sessions.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          'No sessions recorded yet.',
+                          style: TextStyle(fontSize: 16, color: Color(0xFF666666)),
+                        ),
+                      )
+                    else
+                      ..._sessions.map((session) => Card(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            child: ListTile(
+                              leading: const Icon(Icons.videogame_asset, color: Color(0xFF4CAF50)),
+                              title: Text(
+                                '${session.timestamp.day}/${session.timestamp.month}/${session.timestamp.year}'
+                                ' — ${session.accuracyPercentage} accuracy',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              ),
+                              subtitle: Text(
+                                'Difficulty: ${session.difficultyLevel ?? "unknown"} · '
+                                'Duration: ${session.formattedDuration}',
+                              ),
+                            ),
+                          )),
+
+                    const SizedBox(height: 20),
+
+                    // Switch to patient mode
+                    SizedBox(
+                      height: 60,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.home);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4CAF50),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text(
+                          'Switch to Patient Mode',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              
-              // Navigate to patient mode button
-              const SizedBox(height: 20),
-              SizedBox(
-                height: 60,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppRoutes.home);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Switch to Patient Mode',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Build a feature card placeholder
-  Widget _buildFeatureCard(
-    String title,
-    String description,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                size: 32,
-                color: color,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF666666),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Color(0xFF999999),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -227,22 +268,16 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
   /// Handle logout process
   Future<void> _handleLogout() async {
     try {
-      // TODO: Uncomment Firebase logout when config files are added
-      // await _authService.logout();
-      
-      // Simulate logout for testing
-      await Future.delayed(const Duration(milliseconds: 500));
-      
+      await _authService.logout();
+      await _patientService.clearSelectedPatient();
+
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.login);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Logout failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Logout failed: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     }

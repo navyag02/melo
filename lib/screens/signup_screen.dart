@@ -2,35 +2,50 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../utils/app_routes.dart';
 
-/// LoginScreen handles caregiver authentication
-/// This screen is for caregivers to log in with email/password
-/// Patients don't need to log in - they use the app directly
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+/// SignupScreen handles caregiver registration
+/// This screen allows new caregivers to create accounts with email/password
+/// The UI is designed to be consistent with the login screen and elderly-friendly
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final AuthService _authService = AuthService();
   
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  /// Handle login process
-  Future<void> _handleLogin() async {
+  /// Handle registration process
+  Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Check if passwords match
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Passwords do not match'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
       return;
     }
 
@@ -39,21 +54,38 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _authService.loginCaregiver(
+      await _authService.registerCaregiver(
         _emailController.text.trim(),
         _passwordController.text,
       );
       
       if (mounted) {
-        // Login successful - navigate to caregiver dashboard
-        Navigator.pushReplacementNamed(context, AppRoutes.caregiverDashboard);
+        // Registration successful - show success message and navigate to login
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful! Please log in.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        // Navigate to login screen
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
       }
     } catch (e) {
       if (mounted) {
         // Show error message
+        String errorMessage = 'Registration failed';
+        if (e.toString().contains('email-already-in-use')) {
+          errorMessage = 'This email is already registered';
+        } else if (e.toString().contains('weak-password')) {
+          errorMessage = 'Password is too weak (minimum 6 characters)';
+        } else if (e.toString().contains('invalid-email')) {
+          errorMessage = 'Please enter a valid email address';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: ${e.toString()}'),
+            content: Text('$errorMessage: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -104,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   // Title
                   const Text(
-                    'Caregiver Login',
+                    'Caregiver Registration',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -115,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   // Subtitle
                   const Text(
-                    'Enter your credentials to access the dashboard',
+                    'Create your caregiver account',
                     style: TextStyle(
                       fontSize: 18,
                       color: Color(0xFF666666),
@@ -191,14 +223,51 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
+                  const SizedBox(height: 20),
+                  
+                  // Confirm password field
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    style: const TextStyle(fontSize: 20),
+                    decoration: InputDecoration(
+                      labelText: 'Confirm Password',
+                      labelStyle: const TextStyle(fontSize: 18),
+                      prefixIcon: const Icon(Icons.lock_outline, size: 28),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                          size: 28,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm your password';
+                      }
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 30),
                   
-                  // Login button
+                  // Sign up button
                   SizedBox(
                     width: double.infinity,
                     height: 60, // Large button for elderly users
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
+                      onPressed: _isLoading ? null : _handleSignup,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4CAF50),
                         foregroundColor: Colors.white,
@@ -213,7 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               strokeWidth: 3,
                             )
                           : const Text(
-                              'Login',
+                              'Sign Up',
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -223,12 +292,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   
-                  // Sign up link
+                  // Back to login link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        'Don\'t have an account? ',
+                        'Already have an account? ',
                         style: TextStyle(
                           fontSize: 18,
                           color: Color(0xFF666666),
@@ -236,10 +305,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, AppRoutes.signup);
+                          Navigator.pushReplacementNamed(context, AppRoutes.login);
                         },
                         child: const Text(
-                          'Sign Up',
+                          'Login',
                           style: TextStyle(
                             fontSize: 18,
                             color: Color(0xFF4CAF50),
@@ -250,9 +319,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   
-                  const SizedBox(height: 20),
-                  
                   // Skip to patient mode (for testing)
+                  const SizedBox(height: 20),
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacementNamed(context, AppRoutes.home);

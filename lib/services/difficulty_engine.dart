@@ -7,6 +7,13 @@ import '../models/session_model.dart';
 /// 
 /// The logic is transparent and explainable - important for healthcare credibility.
 /// No black box ML models, just clear, rule-based adaptive learning.
+/// Difficulty level enum for Firestore storage
+  enum DifficultyLevel {
+    easy,    // 4 pairs
+    medium,  // 6 pairs (default)
+    hard,    // 8 pairs
+  }
+  
 class DifficultyEngine {
   
   /// Difficulty levels with their corresponding card pair counts
@@ -18,12 +25,7 @@ class DifficultyEngine {
   static const double increaseThreshold = 0.80;  // 80% accuracy to increase difficulty
   static const double decreaseThreshold = 0.40;  // 40% accuracy to decrease difficulty
   
-  /// Difficulty level enum for Firestore storage
-  enum DifficultyLevel {
-    easy,    // 4 pairs
-    medium,  // 6 pairs (default)
-    hard,    // 8 pairs
-  }
+  
   
   /// Calculate the appropriate difficulty level based on recent performance
   /// 

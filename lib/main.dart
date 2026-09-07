@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
-// import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/signup_screen.dart';
+import 'screens/add_patient_screen.dart';
+import 'screens/patient_selector_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/game_selection_screen.dart';
 import 'screens/caregiver_dashboard_screen.dart';
 import 'screens/memory_match_game_screen.dart';
+import 'screens/reminders_screen.dart';
+import 'screens/daily_routine_recall_screen.dart';
 import 'utils/app_routes.dart';
+import 'firebase_options.dart';
 
 /// Main entry point for the Melo application
 /// Initializes Firebase and sets up the app with navigation
 void main() async {
   // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
-  // Note: You need to add your Firebase configuration files:
-  // - android/app/google-services.json
-  // - ios/Runner/GoogleService-Info.plist
-  // Get these from Firebase Console after creating your project
-  // TODO: Uncomment Firebase initialization when config files are added
-  // await Firebase.initializeApp();
-  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MeloApp());
 }
 
@@ -35,16 +38,13 @@ class MeloApp extends StatelessWidget {
     return MaterialApp(
       title: 'Melo - Memory & Cognitive Assistance',
       debugShowCheckedModeBanner: false,
-      
+
       // App theme optimized for elderly users
       theme: ThemeData(
-        // Use a warm, calming color scheme
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF4CAF50), // Green as primary color
           brightness: Brightness.light,
         ),
-        
-        // Larger text sizes for elderly users
         textTheme: const TextTheme(
           displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
           displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -62,11 +62,7 @@ class MeloApp extends StatelessWidget {
           labelMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           labelSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
-        
-        // Enable Material 3 design
         useMaterial3: true,
-        
-        // Default elevated button style for large touch targets
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 60), // Large touch targets
@@ -77,16 +73,23 @@ class MeloApp extends StatelessWidget {
           ),
         ),
       ),
-      
+
       // Navigation routes configuration
       initialRoute: AppRoutes.splash,
       routes: {
         AppRoutes.splash: (context) => const SplashScreen(),
         AppRoutes.login: (context) => const LoginScreen(),
+        AppRoutes.signup: (context) => const SignupScreen(),
+        // FIX: these two routes were missing before — navigating to them
+        // would crash the app with a "route not found" error.
+        AppRoutes.addPatient: (context) => const AddPatientScreen(),
+        AppRoutes.patientSelector: (context) => const PatientSelectorScreen(),
         AppRoutes.home: (context) => const HomeScreen(),
         AppRoutes.gameSelection: (context) => const GameSelectionScreen(),
         AppRoutes.caregiverDashboard: (context) => const CaregiverDashboardScreen(),
         AppRoutes.memoryMatchGame: (context) => const MemoryMatchGameScreen(),
+        AppRoutes.reminders: (context) => const RemindersScreen(),
+        AppRoutes.dailyRoutineRecall: (context) => const DailyRoutineRecallScreen(),
       },
     );
   }

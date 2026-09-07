@@ -95,8 +95,24 @@ class FirestoreService {
     }
   }
 
-  /// Get recent sessions for a specific patient and game type
-  /// Useful for showing recent performance in specific games
+  /// Get all sessions (for caregiver dashboard analytics)
+  Future<List<SessionModel>> getAllSessions() async {
+    try {
+      QuerySnapshot querySnapshot = await _sessionsCollection
+          .orderBy('timestamp', descending: true)
+          .get();
+      
+      return querySnapshot.docs
+          .map((doc) => SessionModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Error getting all sessions: $e');
+      rethrow;
+    }
+  }
+
+  /// Get recent sessions for a specific patient and game type (for adaptive difficulty)
+  /// This is used by the AI adaptive difficulty engine to analyze patient performance
   Future<List<SessionModel>> getRecentSessionsForGame(
       String patientId, String gameType, {int limit = 10}) async {
     try {
@@ -116,19 +132,4 @@ class FirestoreService {
     }
   }
 
-  /// Get all sessions (for caregiver dashboard analytics)
-  Future<List<SessionModel>> getAllSessions() async {
-    try {
-      QuerySnapshot querySnapshot = await _sessionsCollection
-          .orderBy('timestamp', descending: true)
-          .get();
-      
-      return querySnapshot.docs
-          .map((doc) => SessionModel.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      print('Error getting all sessions: $e');
-      rethrow;
-    }
-  }
 }
