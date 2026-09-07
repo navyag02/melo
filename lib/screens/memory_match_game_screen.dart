@@ -101,33 +101,26 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
   @override
   void initState() {
     super.initState();
+    // Initialize with default difficulty for first round
+    currentDifficulty = DifficultyEngine.DifficultyLevel.medium;
+    nextDifficulty = DifficultyEngine.DifficultyLevel.medium;
     _initializeGame();
   }
 
   /// Initialize the game with adaptive difficulty
   /// This is where our AI adaptive difficulty engine comes into play
-  Future<void> _initializeGame() async {
-    // STEP 1: Calculate appropriate difficulty using the AI engine
-    // TODO: Uncomment when Firebase is configured
-    // List<SessionModel> recentSessions = await _getRecentSessions();
-    // nextDifficulty = DifficultyEngine.calculateNextDifficulty(
-    //   recentSessions: recentSessions,
-    //   currentDifficulty: currentDifficulty,
-    // );
-    
-    // For now, use default medium difficulty (Firebase disabled)
-    nextDifficulty = DifficultyEngine.DifficultyLevel.medium;
+  void _initializeGame() {
+    // STEP 1: Use the nextDifficulty as the current difficulty for this round
+    currentDifficulty = nextDifficulty;
     
     // STEP 2: Get the number of pairs for the calculated difficulty
-    totalPairs = DifficultyEngine.getPairsForDifficulty(nextDifficulty);
+    totalPairs = DifficultyEngine.getPairsForDifficulty(currentDifficulty);
     
-    // STEP 3: Generate difficulty change message
-    difficultyChangeMessage = DifficultyEngine.getDifficultyChangeMessage(
-      oldDifficulty: currentDifficulty,
-      newDifficulty: nextDifficulty,
-    );
+    // STEP 3: Generate initial difficulty message (will be updated after round completes)
+    difficultyChangeMessage = 'Current difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty)}';
     
-    print('Adaptive Difficulty Engine: Starting game with ${DifficultyEngine.getDifficultyName(nextDifficulty)}');
+    print('Adaptive Difficulty Engine: Starting game with ${DifficultyEngine.getDifficultyName(currentDifficulty)}');
+    print('Adaptive Difficulty Engine: Total pairs: $totalPairs');
     
     // STEP 4: Create cards based on the calculated difficulty
     _createCardsForDifficulty();
