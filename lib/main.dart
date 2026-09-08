@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
@@ -11,6 +12,7 @@ import 'screens/caregiver_dashboard_screen.dart';
 import 'screens/memory_match_game_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'screens/daily_routine_recall_screen.dart';
+import 'screens/attention_focus_screen.dart';
 import 'utils/app_routes.dart';
 import 'firebase_options.dart';
 
@@ -45,22 +47,26 @@ class MeloApp extends StatelessWidget {
           seedColor: const Color(0xFF4CAF50), // Green as primary color
           brightness: Brightness.light,
         ),
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          displaySmall: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          headlineLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          headlineSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-          titleMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          titleSmall: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          bodyLarge: TextStyle(fontSize: 20),
-          bodyMedium: TextStyle(fontSize: 18),
-          bodySmall: TextStyle(fontSize: 16),
-          labelLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-          labelMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          labelSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        textTheme: GoogleFonts.nunitoTextTheme(
+          const TextTheme(
+            displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            displaySmall: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            headlineLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            headlineSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+            titleMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            titleSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            // Body/label sizes raised to a consistent 20 baseline for
+            // elderly-friendly readability, as requested.
+            bodyLarge: TextStyle(fontSize: 20),
+            bodyMedium: TextStyle(fontSize: 20),
+            bodySmall: TextStyle(fontSize: 20),
+            labelLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+            labelMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+            labelSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+          ),
         ),
         useMaterial3: true,
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -90,6 +96,7 @@ class MeloApp extends StatelessWidget {
         AppRoutes.memoryMatchGame: (context) => const MemoryMatchGameScreen(),
         AppRoutes.reminders: (context) => const RemindersScreen(),
         AppRoutes.dailyRoutineRecall: (context) => const DailyRoutineRecallScreen(),
+        AppRoutes.attentionFocus: (context) => const AttentionFocusScreen(),
       },
     );
   }

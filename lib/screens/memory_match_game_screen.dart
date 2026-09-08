@@ -528,25 +528,66 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
     );
   }
 
-  /// Build individual card
+  /// Build individual card, with a real 3D flip animation between the
+  /// back (hidden) and front (revealed) faces.
+  ///
+  /// FIX (flip replay bug): matched cards used to replay their flip
+  /// animation every time GridView.builder recreated them after
+  /// scrolling out of and back into view. Matched cards are now rendered
+  /// statically in their final revealed state — only cards currently
+  /// mid-flip (tapped, not yet resolved as matched/unmatched) animate.
   Widget _buildCard(CardModel card) {
-    return GestureDetector(
-      onTap: () => _handleCardTap(card),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+    // Matched cards: no animation wrapper at all, so scrolling them back
+    // into view can never replay a flip.
+    if (card.isMatched) {
+      return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              spreadRadius: 2,
-              blurRadius: 4,
-            ),
+            BoxShadow(color: Colors.grey.withOpacity(0.3), spreadRadius: 2, blurRadius: 4),
           ],
         ),
-        child: card.isFlipped || card.isMatched
-            ? _buildCardFront(card)
-            : _buildCardBack(),
+        child: _buildCardFront(card),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => _handleCardTap(card),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: card.isFlipped ? 1 : 0),
+        duration: const Duration(milliseconds: 300),
+        builder: (context, value, child) {
+          final angle = value * pi; // 0 -> 180 degrees
+          final showFront = value >= 0.5;
+
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001) // perspective
+              ..rotateY(angle),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.3),
+                    spreadRadius: 2,
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+              // Mirror the front face's content back so it doesn't render
+              // reversed once we've rotated past 90 degrees.
+              child: showFront
+                  ? Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()..rotateY(pi),
+                      child: _buildCardFront(card),
+                    )
+                  : _buildCardBack(),
+            ),
+          );
+        },
       ),
     );
   }
@@ -655,18 +696,24 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Success icon
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: const Color(0xFF4CAF50),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.celebration,
-              size: 64,
-              color: Colors.white,
+          // Success icon — small bounce-in celebration on appearance
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.elasticOut,
+            builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CAF50),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.celebration,
+                size: 64,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 32),

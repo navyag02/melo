@@ -174,7 +174,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                                   child: ListTile(
                                     contentPadding: const EdgeInsets.all(16),
                                     leading: const Icon(Icons.alarm,
-                                        color: Color(0xFFFF9800), size: 32),
+                                        color: Color(0xFFFF9800), size: 28),
                                     title: Text(
                                       reminder.title,
                                       style: const TextStyle(

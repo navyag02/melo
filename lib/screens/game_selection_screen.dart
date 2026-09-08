@@ -64,28 +64,28 @@ class GameSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     
-                    // Word Puzzle Game
+                    // Daily Routine Recall Game
                     _buildGameCard(
                       context,
-                      title: 'Word Puzzle',
-                      description: 'Arrange letters to form words',
-                      icon: Icons.text_fields,
+                      title: 'Daily Routine',
+                      description: 'Arrange your daily activities in order',
+                      icon: Icons.checklist,
                       color: const Color(0xFF9C27B0), // Purple
                       onTap: () {
-                        _showComingSoonMessage(context, 'Word Puzzle');
+                        Navigator.pushNamed(context, AppRoutes.dailyRoutineRecall);
                       },
                     ),
                     const SizedBox(height: 20),
                     
-                    // Picture Quiz Game
+                    // Attention & Concentration Game
                     _buildGameCard(
                       context,
-                      title: 'Picture Quiz',
-                      description: 'Identify objects in pictures',
-                      icon: Icons.image,
+                      title: 'Spot the Difference',
+                      description: 'Find the tile that looks different',
+                      icon: Icons.visibility,
                       color: const Color(0xFFFF5722), // Deep Orange
                       onTap: () {
-                        _showComingSoonMessage(context, 'Picture Quiz');
+                        Navigator.pushNamed(context, AppRoutes.attentionFocus);
                       },
                     ),
                     const SizedBox(height: 20),

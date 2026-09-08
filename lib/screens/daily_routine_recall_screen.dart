@@ -240,53 +240,74 @@ class _DailyRoutineRecallScreenState extends State<DailyRoutineRecallScreen> {
 
           // Shuffled step cards
           Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.3,
-              ),
-              itemCount: _shuffledSteps.length,
+            // FIX: a small padding buffer around the GridView gives edge
+            // tiles' shadows room to render without needing to disable
+            // clipping (Clip.none previously caused content to bleed
+            // upward over the header text — this avoids that regression).
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.3,
+                ),
+                itemCount: _shuffledSteps.length,
               itemBuilder: (context, index) {
                 final step = _shuffledSteps[index];
                 final alreadyPicked = _selectedOrder.contains(step);
 
-                return InkWell(
-                  onTap: alreadyPicked ? null : () => _handleStepTap(step),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: alreadyPicked ? const Color(0xFFE0E0E0) : Colors.white,
+                return Container(
+                  decoration: BoxDecoration(
+                    color: alreadyPicked ? const Color(0xFFE0E0E0) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: alreadyPicked
+                        ? []
+                        : [BoxShadow(color: Colors.grey.withOpacity(0.3), spreadRadius: 2, blurRadius: 4)],
+                  ),
+                  // FIX (ripple bleed): the tap ripple wasn't being clipped
+                  // to the card's rounded shape, so it appeared to spill
+                  // outside the visible card into the surrounding space.
+                  // ClipRRect + Material(clipBehavior: antiAlias) hard-clips
+                  // the ripple to exactly the card's rounded rect.
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Material(
+                      color: Colors.transparent,
+                      clipBehavior: Clip.antiAlias,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: alreadyPicked
-                          ? []
-                          : [const BoxShadow(color: Colors.black12, blurRadius: 4)],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          step.icon,
-                          size: 40,
-                          color: alreadyPicked ? const Color(0xFF999999) : const Color(0xFF4CAF50),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          step.label,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: alreadyPicked ? const Color(0xFF999999) : const Color(0xFF333333),
+                      child: InkWell(
+                        onTap: alreadyPicked ? null : () => _handleStepTap(step),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                step.icon,
+                                size: 40,
+                                color: alreadyPicked ? const Color(0xFF999999) : const Color(0xFF4CAF50),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                step.label,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: alreadyPicked ? const Color(0xFF999999) : const Color(0xFF333333),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 );
               },
+              ),
             ),
           ),
         ],
@@ -307,11 +328,17 @@ class _DailyRoutineRecallScreenState extends State<DailyRoutineRecallScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: const BoxDecoration(color: Color(0xFF4CAF50), shape: BoxShape.circle),
-            child: const Icon(Icons.check, size: 64, color: Colors.white),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.elasticOut,
+            builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: const BoxDecoration(color: Color(0xFF4CAF50), shape: BoxShape.circle),
+              child: const Icon(Icons.check, size: 64, color: Colors.white),
+            ),
           ),
           const SizedBox(height: 24),
           const Text(

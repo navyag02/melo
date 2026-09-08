@@ -47,6 +47,12 @@ dependencies:
   flutter_local_notifications: ^17.2.3
   timezone: ^0.9.4
 
+  # For the caregiver dashboard accuracy trend chart
+  fl_chart: ^0.68.0
+
+  # For the Nunito font used app-wide
+  google_fonts: ^6.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

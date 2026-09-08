@@ -12,4 +12,5 @@ class AppRoutes {
   static const String memoryMatchGame = '/memory-match-game';
   static const String reminders = '/reminders'; // FIX: added for reminders feature
   static const String dailyRoutineRecall = '/daily-routine-recall'; // new game
+  static const String attentionFocus = '/attention-focus'; // new game
 }

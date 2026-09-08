@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/patient_service.dart';
@@ -206,6 +207,19 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                     ),
                     const SizedBox(height: 24),
 
+                    // Accuracy trend chart — real analytics visualization,
+                    // not just a raw list. Only shown when there's enough
+                    // data to make a trend meaningful.
+                    if (_sessions.length >= 2) ...[
+                      const Text(
+                        'Accuracy Trend',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAccuracyChart(),
+                      const SizedBox(height: 24),
+                    ],
+
                     // Session history
                     const Text(
                       'Session History',
@@ -225,13 +239,21 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                       ..._sessions.map((session) => Card(
                             margin: const EdgeInsets.only(bottom: 10),
                             child: ListTile(
-                              leading: const Icon(Icons.videogame_asset, color: Color(0xFF4CAF50)),
+                              leading: Icon(
+                                _iconForGameType(session.gameType),
+                                color: const Color(0xFF4CAF50),
+                                size: 28, // standardized list-icon size app-wide
+                              ),
                               title: Text(
-                                '${session.timestamp.day}/${session.timestamp.month}/${session.timestamp.year}'
-                                ' — ${session.accuracyPercentage} accuracy',
+                                // FIX: now shows which game this session was,
+                                // since sessions from multiple games are
+                                // mixed together in this list.
+                                '${_labelForGameType(session.gameType)} — '
+                                '${session.accuracyPercentage} accuracy',
                                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                               ),
                               subtitle: Text(
+                                '${session.timestamp.day}/${session.timestamp.month}/${session.timestamp.year} · '
                                 'Difficulty: ${session.difficultyLevel ?? "unknown"} · '
                                 'Duration: ${session.formattedDuration}',
                               ),
@@ -263,6 +285,102 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
               ),
       ),
     );
+  }
+
+  /// Line chart of accuracy over the patient's recent sessions.
+  /// Shows the last 10 sessions, oldest to newest (left to right), so a
+  /// caregiver can see the trend at a glance instead of reading a list
+  /// of numbers.
+  Widget _buildAccuracyChart() {
+    // _sessions is sorted newest-first (from Firestore orderBy timestamp
+    // descending) — reverse a capped slice so the chart reads left-to-right
+    // as oldest-to-newest, which is the intuitive reading direction.
+    final chartSessions = _sessions.take(10).toList().reversed.toList();
+
+    final spots = <FlSpot>[
+      for (int i = 0; i < chartSessions.length; i++)
+        FlSpot(i.toDouble(), chartSessions[i].accuracy * 100),
+    ];
+
+    return Container(
+      height: 220,
+      padding: const EdgeInsets.fromLTRB(8, 20, 20, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+      ),
+      child: LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: 100,
+          gridData: FlGridData(
+            show: true,
+            horizontalInterval: 25,
+            drawVerticalLine: false,
+          ),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 36,
+                interval: 25,
+                getTitlesWidget: (value, meta) => Text(
+                  '${value.toInt()}%',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+                ),
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: const Color(0xFF4CAF50),
+              barWidth: 3,
+              dotData: const FlDotData(show: true),
+              belowBarData: BarAreaData(
+                show: true,
+                color: const Color(0xFF4CAF50).withOpacity(0.15),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Human-readable name for each game type, since sessions from multiple
+  /// games are now mixed together in one list.
+  String _labelForGameType(String gameType) {
+    switch (gameType) {
+      case 'memory_matching_ner':
+        return 'Memory Match';
+      case 'daily_routine_recall_ner':
+        return 'Daily Routine';
+      case 'attention_focus_ner':
+        return 'Spot the Difference';
+      default:
+        return gameType;
+    }
+  }
+
+  /// Icon shown next to each session, matching its game type.
+  IconData _iconForGameType(String gameType) {
+    switch (gameType) {
+      case 'memory_matching_ner':
+        return Icons.style;
+      case 'daily_routine_recall_ner':
+        return Icons.checklist;
+      case 'attention_focus_ner':
+        return Icons.visibility;
+      default:
+        return Icons.videogame_asset;
+    }
   }
 
   /// Handle logout process
