@@ -347,7 +347,9 @@ class _DailyRoutineRecallScreenState extends State<DailyRoutineRecallScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Accuracy: ${(_lastAccuracy * 100).toStringAsFixed(0)}%',
+            // FIX: no raw accuracy % shown to patients — see note in
+            // _encouragingLabel(). Exact accuracy still saves to Firestore.
+            _encouragingLabel(_lastAccuracy),
             style: const TextStyle(fontSize: 22, color: Color(0xFF666666)),
           ),
           const SizedBox(height: 20),
@@ -390,5 +392,13 @@ class _DailyRoutineRecallScreenState extends State<DailyRoutineRecallScreen> {
         ],
       ),
     );
+  }
+
+  /// Encouraging, non-numeric feedback — same approach as the memory
+  /// matching game. See that file's comment for the reasoning.
+  String _encouragingLabel(double accuracy) {
+    if (accuracy >= 0.8) return 'Wonderful!';
+    if (accuracy >= 0.5) return 'Well Done!';
+    return 'Good Try!';
   }
 }

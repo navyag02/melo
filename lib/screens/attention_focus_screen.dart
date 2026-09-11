@@ -275,8 +275,11 @@ class _AttentionFocusScreenState extends State<AttentionFocusScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'You got $_correctCount out of $_totalRounds correct (${(accuracy * 100).toStringAsFixed(0)}%)',
-            style: const TextStyle(fontSize: 20, color: Color(0xFF666666)),
+            // FIX: no raw count/percentage shown to patients — see note
+            // in _encouragingLabel(). Exact accuracy still saves to
+            // Firestore for the difficulty engine and caregiver dashboard.
+            _encouragingLabel(accuracy),
+            style: const TextStyle(fontSize: 22, color: Color(0xFF666666)),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -319,5 +322,13 @@ class _AttentionFocusScreenState extends State<AttentionFocusScreen> {
         ],
       ),
     );
+  }
+
+  /// Encouraging, non-numeric feedback — same approach as the other two
+  /// games. See memory_match_game_screen.dart's comment for the reasoning.
+  String _encouragingLabel(double accuracy) {
+    if (accuracy >= 0.8) return 'Wonderful!';
+    if (accuracy >= 0.5) return 'Well Done!';
+    return 'Good Try!';
   }
 }

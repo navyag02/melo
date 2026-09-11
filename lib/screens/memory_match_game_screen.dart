@@ -59,7 +59,8 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       id: 'bihu',
       name: 'Bihu Dance',
       regionalName: 'বিহু নৃত্য', // Assamese - TODO: verify translation
-      icon: Icons.music_note, // TODO: Replace with Bihu dancer illustration
+      icon: Icons.music_note, // used only if imagePath is null
+      imagePath: 'assets/images/bihu.jpeg', // TODO: add this file
       color: Colors.red,
       description: 'Traditional Assamese dance',
     ),
@@ -67,7 +68,8 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       id: 'hornbill',
       name: 'Hornbill',
       regionalName: 'হৰ্নিল', // Assamese approximation - TODO: verify translation
-      icon: Icons.flutter_dash, // TODO: Replace with Hornbill bird illustration
+      icon: Icons.flutter_dash,
+      imagePath: 'assets/images/hornbill.jpeg', // TODO: add this file
       color: Colors.green,
       description: 'State bird of Nagaland',
     ),
@@ -75,7 +77,8 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       id: 'bamboo',
       name: 'Bamboo Craft',
       regionalName: 'বাঁহ শিল্প', // Assamese - TODO: verify translation
-      icon: Icons.grass, // TODO: Replace with bamboo handicraft illustration
+      icon: Icons.grass,
+      imagePath: 'assets/images/bamboo.jpeg', // TODO: add this file
       color: Colors.lightGreen,
       description: 'Traditional bamboo handicrafts',
     ),
@@ -83,7 +86,8 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       id: 'tea',
       name: 'Tea Garden',
       regionalName: 'চাহ বাগিছা', // Assamese - TODO: verify translation
-      icon: Icons.local_florist, // TODO: Replace with tea leaf illustration
+      icon: Icons.local_florist,
+      imagePath: 'assets/images/tea.jpeg', // TODO: add this file
       color: Colors.brown,
       description: 'Assam tea gardens',
     ),
@@ -91,7 +95,8 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       id: 'root_bridge',
       name: 'Root Bridge',
       regionalName: 'শিপা সেতু', // Assamese approximation - TODO: verify translation
-      icon: Icons.water, // TODO: Replace with living root bridge illustration
+      icon: Icons.water,
+      imagePath: 'assets/images/bridge.jpeg', // TODO: add this file
       color: Colors.amber,
       description: 'Living root bridges of Meghalaya',
     ),
@@ -99,7 +104,8 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       id: 'textile',
       name: 'Traditional Textile',
       regionalName: 'আদৰৰ কাপোৰ', // Assamese - TODO: verify translation
-      icon: Icons.checkroom, // TODO: Replace with traditional textile pattern
+      icon: Icons.checkroom,
+      imagePath: 'assets/images/textile.jpeg', // TODO: add this file
       color: Colors.purple,
       description: 'NER handloom textiles',
     ),
@@ -594,26 +600,89 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
 
   /// Build the front of the card (when flipped)
   Widget _buildCardFront(CardModel card) {
+    final borderColor = card.isMatched ? Colors.green : Colors.grey;
+    final borderWidth = card.isMatched ? 3.0 : 1.0;
+    final radius = BorderRadius.circular(12);
+
+    // When a real image is available, it fills the entire card with the
+    // name/regional name overlaid at the bottom — not just a small icon
+    // in the middle.
+    if (card.theme.imagePath != null) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: borderColor, width: borderWidth),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(11), // slightly inset so the border shows cleanly
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                card.theme.imagePath!,
+                fit: BoxFit.cover,
+              ),
+              // Bottom label strip so the name stays readable over any image
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.55),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        card.theme.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        card.theme.regionalName,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white70,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Fallback layout (no image set yet) — original icon + text design.
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: card.isMatched ? Colors.green : Colors.grey,
-          width: card.isMatched ? 3 : 1,
-        ),
+        borderRadius: radius,
+        border: Border.all(color: borderColor, width: borderWidth),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Cultural icon
           Icon(
             card.theme.icon,
             size: 48,
             color: card.theme.color,
           ),
           const SizedBox(height: 8),
-          // Theme name
           Text(
             card.theme.name,
             style: const TextStyle(
@@ -623,7 +692,6 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
             ),
             textAlign: TextAlign.center,
           ),
-          // Regional language name
           Text(
             card.theme.regionalName,
             style: const TextStyle(
@@ -751,7 +819,17 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
                 const SizedBox(height: 16),
                 _buildResultRow('Time', _formatTime(stopwatch.elapsed), Icons.timer, Colors.green),
                 const SizedBox(height: 16),
-                _buildResultRow('Accuracy', '${(accuracy * 100).toStringAsFixed(0)}%', Icons.check_circle, Colors.purple),
+                // FIX: patients no longer see a raw accuracy percentage —
+                // that number can feel discouraging. They see encouraging,
+                // effort-based feedback instead. The real accuracy is
+                // still saved to Firestore for the difficulty engine and
+                // the caregiver dashboard, which does show exact numbers.
+                _buildResultRow(
+                  'How you did',
+                  _encouragingLabel(accuracy),
+                  Icons.favorite,
+                  Colors.purple,
+                ),
               ],
             ),
           ),
@@ -1028,6 +1106,17 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$minutes:$seconds';
   }
+
+  /// Encouraging, non-numeric feedback shown to the patient instead of a
+  /// raw accuracy percentage — a low number displayed plainly can feel
+  /// discouraging to someone managing memory decline. Exact accuracy is
+  /// still saved to Firestore for the difficulty engine and the
+  /// caregiver dashboard.
+  String _encouragingLabel(double accuracy) {
+    if (accuracy >= 0.8) return 'Wonderful!';
+    if (accuracy >= 0.5) return 'Well Done!';
+    return 'Good Try!';
+  }
 }
 
 /// Model for a cultural card theme
@@ -1036,6 +1125,7 @@ class CulturalCardTheme {
   final String name;
   final String regionalName;
   final IconData icon;
+  final String? imagePath; // e.g. 'assets/images/bihu.png' — null falls back to icon
   final Color color;
   final String description;
 
@@ -1044,6 +1134,7 @@ class CulturalCardTheme {
     required this.name,
     required this.regionalName,
     required this.icon,
+    this.imagePath,
     required this.color,
     required this.description,
   });

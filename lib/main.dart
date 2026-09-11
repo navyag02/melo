@@ -10,6 +10,7 @@ import 'screens/home_screen.dart';
 import 'screens/game_selection_screen.dart';
 import 'screens/caregiver_dashboard_screen.dart';
 import 'screens/memory_match_game_screen.dart';
+import 'screens/trip_itinerary_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'screens/daily_routine_recall_screen.dart';
 import 'screens/attention_focus_screen.dart';
@@ -19,10 +20,8 @@ import 'firebase_options.dart';
 /// Main entry point for the Melo application
 /// Initializes Firebase and sets up the app with navigation
 void main() async {
-  // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -94,6 +93,7 @@ class MeloApp extends StatelessWidget {
         AppRoutes.gameSelection: (context) => const GameSelectionScreen(),
         AppRoutes.caregiverDashboard: (context) => const CaregiverDashboardScreen(),
         AppRoutes.memoryMatchGame: (context) => const MemoryMatchGameScreen(),
+        AppRoutes.tripItinerary: (context) => const TripItineraryScreen(),
         AppRoutes.reminders: (context) => const RemindersScreen(),
         AppRoutes.dailyRoutineRecall: (context) => const DailyRoutineRecallScreen(),
         AppRoutes.attentionFocus: (context) => const AttentionFocusScreen(),

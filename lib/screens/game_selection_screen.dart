@@ -63,6 +63,19 @@ class GameSelectionScreen extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 20),
+
+                    // Trip Itinerary Recall Game
+                    _buildGameCard(
+                      context,
+                      title: 'Trip Itinerary',
+                      description: 'Remember your trip through the North East',
+                      icon: Icons.luggage,
+                      color: const Color(0xFF3F51B5), // Indigo
+                      onTap: () {
+                        Navigator.pushNamed(context, AppRoutes.tripItinerary);
+                      },
+                    ),
+                    const SizedBox(height: 20),
                     
                     // Daily Routine Recall Game
                     _buildGameCard(
@@ -90,6 +103,7 @@ class GameSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     
+
                     // Number Sequence Game
                     _buildGameCard(
                       context,
@@ -101,6 +115,8 @@ class GameSelectionScreen extends StatelessWidget {
                         _showComingSoonMessage(context, 'Number Sequence');
                       },
                     ),
+                    
+                    
                   ],
                 ),
               ),

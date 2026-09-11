@@ -13,7 +13,7 @@ import '../models/session_model.dart';
     medium,  // 6 pairs (default)
     hard,    // 8 pairs
   }
-  
+
 class DifficultyEngine {
   
   /// Difficulty levels with their corresponding card pair counts
@@ -135,27 +135,27 @@ class DifficultyEngine {
     }
     
     if (oldDifficulty == DifficultyLevel.medium && newDifficulty == DifficultyLevel.hard) {
-      return 'Great job! Next round will be a bit harder (8 pairs).';
+      return 'Great job! Next round will be a bit harder.';
     }
     
     if (oldDifficulty == DifficultyLevel.medium && newDifficulty == DifficultyLevel.easy) {
-      return 'Let\'s try an easier round next time (4 pairs).';
+      return 'Let\'s try an easier round next time.';
     }
     
     if (oldDifficulty == DifficultyLevel.easy && newDifficulty == DifficultyLevel.medium) {
-      return 'Good progress! Moving to medium difficulty (6 pairs).';
+      return 'Good progress! Moving to medium difficulty.';
     }
     
     if (oldDifficulty == DifficultyLevel.hard && newDifficulty == DifficultyLevel.medium) {
-      return 'Let\'s try medium difficulty next round (6 pairs).';
+      return 'Let\'s try medium difficulty next round.';
     }
     
     if (oldDifficulty == DifficultyLevel.easy && newDifficulty == DifficultyLevel.hard) {
-      return 'Excellent progress! Jumping to hard difficulty (8 pairs).';
+      return 'Excellent progress! Jumping to hard difficulty.';
     }
     
     if (oldDifficulty == DifficultyLevel.hard && newDifficulty == DifficultyLevel.easy) {
-      return 'Let\'s start with easier rounds (4 pairs).';
+      return 'Let\'s start with easier rounds.';
     }
     
     return 'Difficulty adjusted for next round.';
@@ -165,11 +165,11 @@ class DifficultyEngine {
   static String getDifficultyName(DifficultyLevel level) {
     switch (level) {
       case DifficultyLevel.easy:
-        return 'Easy (4 pairs)';
+        return 'Easy';
       case DifficultyLevel.medium:
-        return 'Medium (6 pairs)';
+        return 'Medium';
       case DifficultyLevel.hard:
-        return 'Hard (8 pairs)';
+        return 'Hard';
     }
   }
 }
