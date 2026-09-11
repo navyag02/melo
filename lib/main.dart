@@ -14,16 +14,27 @@ import 'screens/trip_itinerary_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'screens/daily_routine_recall_screen.dart';
 import 'screens/attention_focus_screen.dart';
+import 'screens/personal_memories_manage_screen.dart';
+import 'screens/personal_memory_form_screen.dart';
+import 'screens/personal_memories_play_screen.dart';
 import 'utils/app_routes.dart';
 import 'firebase_options.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'supabase_options.dart';
 
 /// Main entry point for the Melo application
-/// Initializes Firebase and sets up the app with navigation
+/// Initializes Firebase, Supabase, and sets up the app with navigation
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Initialize Supabase for Personal Memories image storage
+  await Supabase.initialize(
+    url: SupabaseOptions.url,
+    anonKey: SupabaseOptions.anonKey,
   );
 
   runApp(const MeloApp());
@@ -97,6 +108,9 @@ class MeloApp extends StatelessWidget {
         AppRoutes.reminders: (context) => const RemindersScreen(),
         AppRoutes.dailyRoutineRecall: (context) => const DailyRoutineRecallScreen(),
         AppRoutes.attentionFocus: (context) => const AttentionFocusScreen(),
+        AppRoutes.personalMemoriesManage: (context) => const PersonalMemoriesManageScreen(),
+        AppRoutes.personalMemoryForm: (context) => const PersonalMemoryFormScreen(),
+        AppRoutes.personalMemoriesPlay: (context) => const PersonalMemoriesPlayScreen(),
       },
     );
   }

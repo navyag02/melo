@@ -207,6 +207,57 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                     ),
                     const SizedBox(height: 24),
 
+                    // --- NEW: Game Management for Caregiver ---
+                    const Text(
+                      'Game Management',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pushNamed(context, AppRoutes.personalMemoriesManage);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF795548).withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.photo_album, color: Color(0xFF795548), size: 32),
+                              ),
+                              const SizedBox(width: 16),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Manage Personal Memories',
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Add photos and custom questions for the patient',
+                                      style: TextStyle(fontSize: 14, color: Color(0xFF666666)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward_ios, color: Color(0xFF999999)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
                     // Accuracy trend chart — real analytics visualization,
                     // not just a raw list. Only shown when there's enough
                     // data to make a trend meaningful.

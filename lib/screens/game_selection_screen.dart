@@ -103,6 +103,20 @@ class GameSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     
+                    
+                    // Personal Memories Game
+                    _buildGameCard(
+                      context,
+                      title: 'Personal Memories',
+                      description: 'Look at personal photos and share memories',
+                      icon: Icons.photo_album,
+                      color: const Color(0xFF795548), // Brown — warm, personal
+                      onTap: () {
+                        Navigator.pushNamed(context, AppRoutes.personalMemoriesPlay);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    
 
                     // Number Sequence Game
                     _buildGameCard(
