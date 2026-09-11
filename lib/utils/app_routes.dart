@@ -13,4 +13,7 @@ class AppRoutes {
   static const String reminders = '/reminders'; // FIX: added for reminders feature
   static const String dailyRoutineRecall = '/daily-routine-recall'; // new game
   static const String attentionFocus = '/attention-focus'; // new game
+  static const String personalMemoriesManage = '/personal-memories-manage';
+  static const String personalMemoryForm = '/personal-memory-form';
+  static const String personalMemoriesPlay = '/personal-memories-play';
 }
