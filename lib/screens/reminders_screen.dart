@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/reminder_model.dart';
 import '../services/reminder_service.dart';
 import '../services/patient_service.dart';
+import '../services/language_service.dart';
+import '../utils/app_strings.dart';
 
 /// RemindersScreen shows a patient's reminders (e.g. medicine, hydration)
 /// and lets a caregiver add a new one. Kept to a single reminder type
@@ -67,7 +69,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Reminder', style: TextStyle(fontSize: 22)),
+          title: Text(AppStrings.t('add_reminder_button'), style: const TextStyle(fontSize: 22)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,13 +136,17 @@ class _RemindersScreenState extends State<RemindersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // FIX: wrapped in ListenableBuilder so this screen rebuilds with
+    // translated text when the language changes.
+    return ListenableBuilder(
+      listenable: languageService,
+      builder: (context, _) => Scaffold(
       backgroundColor: const Color(0xFFFFF8E1),
       appBar: AppBar(
         backgroundColor: const Color(0xFF4CAF50),
-        title: const Text(
-          'Reminders',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+        title: Text(
+          AppStrings.t('reminders_title'),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -158,11 +164,39 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   children: [
                     Expanded(
                       child: _reminders.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No reminders yet.\nTap below to add one.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 20, color: Color(0xFF666666)),
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFFFE0B2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.alarm_add_outlined,
+                                      size: 40,
+                                      color: Color(0xFFFF9800),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    AppStrings.t('no_reminders_yet'),
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF666666),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    AppStrings.t('tap_add_reminder'),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 18, color: Color(0xFF999999)),
+                                  ),
+                                ],
                               ),
                             )
                           : ListView.builder(
@@ -203,7 +237,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _showAddReminderDialog,
                         icon: const Icon(Icons.add, size: 28),
-                        label: const Text('Add Reminder', style: TextStyle(fontSize: 20)),
+                        label: Text(AppStrings.t('add_reminder_button'), style: const TextStyle(fontSize: 20)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4CAF50),
                           foregroundColor: Colors.white,
@@ -216,6 +250,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   ],
                 ),
               ),
+      ),
       ),
     );
   }

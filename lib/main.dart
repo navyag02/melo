@@ -17,6 +17,8 @@ import 'screens/attention_focus_screen.dart';
 import 'screens/personal_memories_manage_screen.dart';
 import 'screens/personal_memory_form_screen.dart';
 import 'screens/personal_memories_play_screen.dart';
+import 'screens/language_selector_screen.dart';
+import 'services/language_service.dart';
 import 'utils/app_routes.dart';
 import 'firebase_options.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -36,6 +38,10 @@ void main() async {
     url: SupabaseOptions.url,
     anonKey: SupabaseOptions.anonKey,
   );
+
+  // Load the patient's previously saved language preference (defaults
+  // to English if none was ever set) before the first frame renders.
+  await languageService.loadSavedLanguage();
 
   runApp(const MeloApp());
 }
@@ -111,6 +117,7 @@ class MeloApp extends StatelessWidget {
         AppRoutes.personalMemoriesManage: (context) => const PersonalMemoriesManageScreen(),
         AppRoutes.personalMemoryForm: (context) => const PersonalMemoryFormScreen(),
         AppRoutes.personalMemoriesPlay: (context) => const PersonalMemoriesPlayScreen(),
+        AppRoutes.languageSelector: (context) => const LanguageSelectorScreen(),
       },
     );
   }

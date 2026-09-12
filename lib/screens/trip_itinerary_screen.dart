@@ -5,6 +5,8 @@ import '../services/patient_service.dart';
 import '../services/difficulty_engine.dart';
 import '../models/session_model.dart';
 import '../utils/app_routes.dart';
+import '../services/language_service.dart';
+import '../utils/app_strings.dart';
 
 /// TripItineraryScreen - A cognitive game targeting sequential/working memory
 /// 
@@ -116,6 +118,7 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
     difficultyChangeMessage = DifficultyEngine.getDifficultyChangeMessage(
       oldDifficulty: currentDifficulty,
       newDifficulty: nextDifficulty,
+      languageCode: languageService.currentLanguage,
     );
     
     print('Trip Itinerary Game: Starting with ${_displayDifficultyName(currentDifficulty)}');
@@ -259,6 +262,7 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
     difficultyChangeMessage = DifficultyEngine.getDifficultyChangeMessage(
       oldDifficulty: currentDifficulty,
       newDifficulty: nextDifficulty,
+      languageCode: languageService.currentLanguage,
     );
     
     print('Trip Itinerary Game: Session completed with ${(accuracy * 100).toStringAsFixed(1)}% accuracy');
@@ -326,25 +330,29 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
     double percentage = correct / total;
     
     if (percentage == 1.0) {
-      return 'Perfect recall! You remembered the whole trip perfectly.';
+      return AppStrings.t('perfect_recall_message');
     } else if (percentage >= 0.75) {
-      return 'Great memory! You remembered most of the trip.';
+      return AppStrings.t('great_memory_message');
     } else if (percentage >= 0.5) {
-      return 'Good effort! A few parts of the trip were tricky.';
+      return AppStrings.t('good_effort_message');
     } else {
-      return 'That was a tough trip to remember — let\'s try an easier one next time.';
+      return AppStrings.t('tough_trip_message');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // FIX: wrapped in ListenableBuilder so this screen rebuilds with
+    // translated text when the language changes.
+    return ListenableBuilder(
+      listenable: languageService,
+      builder: (context, _) => Scaffold(
       backgroundColor: const Color(0xFFFFF8E1), // Consistent warm background
       appBar: AppBar(
         backgroundColor: const Color(0xFF4CAF50),
-        title: const Text(
-          'Trip Itinerary Recall',
-          style: TextStyle(
+        title: Text(
+          AppStrings.t('trip_itinerary_recall_title'),
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -387,13 +395,14 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
                 ? _buildItineraryScreen()
                 : _buildQuestionScreen(),
       ),
+      ),
     );
   }
 
   /// Display only the difficulty level (e.g. "Medium"), without
   /// gameplay parameters such as "(6 pairs)".
   String _displayDifficultyName(DifficultyLevel level) {
-    final name = DifficultyEngine.getDifficultyName(level);
+    final name = DifficultyEngine.getDifficultyName(level, languageCode: languageService.currentLanguage);
     return name.replaceFirst(RegExp(r'\\s*\\([^)]*\\)\\s*$'), '').trim();
   }
 
@@ -428,9 +437,9 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Trip Itinerary',
-                      style: TextStyle(
+                    Text(
+                      AppStrings.t('trip_itinerary_title'),
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF333333),
@@ -491,7 +500,7 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Memorize the trip! Itinerary will disappear in $_revealCountdown seconds...',
+                  '${AppStrings.t('memorize_trip_instruction')} $_revealCountdown ${AppStrings.t('seconds_suffix')}',
                   style: const TextStyle(
                     fontSize: 18,
                     color: Color(0xFF666666),
@@ -523,9 +532,9 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Choose a State to Visit',
-            style: TextStyle(
+          Text(
+            AppStrings.t('choose_state_to_visit'),
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFF333333),
@@ -678,7 +687,7 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Question ${_currentQuestionIndex + 1} of ${_questions.length}',
+                  '${AppStrings.t('question_label')} ${_currentQuestionIndex + 1} ${AppStrings.t('of_label')} ${_questions.length}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -686,7 +695,7 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
                   ),
                 ),
                 Text(
-                  'Correct: $_correctAnswers',
+                  '${AppStrings.t('correct_label')}: $_correctAnswers',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -791,9 +800,9 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
           const SizedBox(height: 32),
           
           // Congratulations text
-          const Text(
-            'Trip Complete!',
-            style: TextStyle(
+          Text(
+            AppStrings.t('trip_complete_title'),
+            style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
               color: Color(0xFF333333),
@@ -848,11 +857,11 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
             ),
             child: Column(
               children: [
-                _buildResultRow('Correct Answers', '$_correctAnswers/${_questions.length}', Icons.check_circle, Colors.green),
+                _buildResultRow(AppStrings.t('correct_answers_label'), '$_correctAnswers/${_questions.length}', Icons.check_circle, Colors.green),
                 const SizedBox(height: 16),
-                _buildResultRow('State Visited', _selectedState, Icons.location_on, Colors.blue),
+                _buildResultRow(AppStrings.t('state_visited_label'), _selectedState, Icons.location_on, Colors.blue),
                 const SizedBox(height: 16),
-                _buildResultRow('Difficulty', _displayDifficultyName(currentDifficulty), Icons.tune, Colors.purple),
+                _buildResultRow(AppStrings.t('difficulty_label'), _displayDifficultyName(currentDifficulty), Icons.tune, Colors.purple),
               ],
             ),
           ),
@@ -878,9 +887,9 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'AI Adaptive Difficulty',
-                        style: TextStyle(
+                      Text(
+                        AppStrings.t('ai_adaptive_difficulty_label'),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2E7D32),
@@ -921,7 +930,7 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
                     ),
                   ),
                   child: Text(
-                    'Play Again (${_displayDifficultyName(nextDifficulty)})',
+                    '${AppStrings.t('play_again_button')} (${_displayDifficultyName(nextDifficulty)})',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -940,9 +949,9 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Back to Games',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  child: Text(
+                    AppStrings.t('back_to_games_button'),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -988,20 +997,20 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(
-          'Exit Game?',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        title: Text(
+          AppStrings.t('exit_game_title'),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          'Your progress will be lost. Are you sure you want to exit?',
-          style: TextStyle(fontSize: 18),
+        content: Text(
+          AppStrings.t('exit_game_body'),
+          style: const TextStyle(fontSize: 18),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(fontSize: 18),
+            child: Text(
+              AppStrings.t('cancel_button'),
+              style: const TextStyle(fontSize: 18),
             ),
           ),
           TextButton(
@@ -1009,9 +1018,9 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text(
-              'Exit',
-              style: TextStyle(fontSize: 18, color: Colors.red),
+            child: Text(
+              AppStrings.t('exit_button'),
+              style: const TextStyle(fontSize: 18, color: Colors.red),
             ),
           ),
         ],

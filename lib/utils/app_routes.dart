@@ -17,4 +17,5 @@ class AppRoutes {
   static const String personalMemoryForm = '/personal-memory-form';
   static const String personalMemoriesPlay = '/personal-memories-play';
   static const String tripItinerary = '/trip-itinerary';
+  static const String languageSelector = '/language-selector';
 }

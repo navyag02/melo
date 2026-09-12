@@ -4,8 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/patient_service.dart';
 import '../services/firestore_service.dart';
+import '../services/recommendation_service.dart';
 import '../models/session_model.dart';
 import '../utils/app_routes.dart';
+import '../services/language_service.dart';
+import '../utils/app_strings.dart';
 
 /// CaregiverDashboardScreen — the real dashboard, wired to Firestore.
 ///
@@ -27,17 +30,25 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
   final AuthService _authService = AuthService();
   final PatientService _patientService = PatientService();
   final FirestoreService _firestoreService = FirestoreService();
+  final RecommendationService _recommendationService = RecommendationService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   bool _isLoading = true;
   String? _patientId;
   String? _patientName;
   List<SessionModel> _sessions = [];
+  GameRecommendation? _recommendation;
 
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+  }
+
+  @override
+  void dispose() {
+    _recommendationService.dispose();
+    super.dispose();
   }
 
   /// Load the selected patient and their sessions.
@@ -59,12 +70,19 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
       return;
     }
 
+    // Load the on-device ML model in parallel with fetching sessions. If
+    // this fails for any reason, RecommendationService.recommend() falls
+    // back to rule-based logic transparently — no branching needed here.
+    await _recommendationService.loadModel();
+
     try {
       final sessions = await _firestoreService.getSessionsForPatient(patientId);
+      final recommendation = _recommendationService.recommend(sessions);
       setState(() {
         _patientId = patientId;
         _patientName = patientName;
         _sessions = sessions;
+        _recommendation = recommendation;
         _isLoading = false;
       });
     } catch (e) {
@@ -73,6 +91,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
         _patientId = patientId;
         _patientName = patientName;
         _sessions = [];
+        _recommendation = _recommendationService.recommend([]);
         _isLoading = false;
       });
       if (mounted) {
@@ -86,44 +105,28 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
     }
   }
 
-  /// Simple rule-based recommendation from the last 3 sessions' average
-  /// accuracy. Same style of transparent, explainable logic as the
-  /// difficulty engine — no black-box model.
-  String _getRecommendation() {
-    if (_sessions.isEmpty) {
-      return 'No sessions yet — encourage the patient to play their first game.';
-    }
-
-    final recent = _sessions.take(3).toList();
-    final avgAccuracy = recent.map((s) => s.accuracy).reduce((a, b) => a + b) / recent.length;
-
-    if (avgAccuracy < 0.5) {
-      return 'Recommend: Easier sessions, more frequent practice.';
-    } else if (avgAccuracy > 0.8) {
-      return 'Recommend: Increase difficulty — patient is progressing well.';
-    } else {
-      return 'Recommend: Continue current routine.';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final User? currentUser = _auth.currentUser;
 
-    return Scaffold(
+    // FIX: wrapped in ListenableBuilder so this screen rebuilds with
+    // translated text when the language changes.
+    return ListenableBuilder(
+      listenable: languageService,
+      builder: (context, _) => Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF4CAF50),
-        title: const Text(
-          'Caregiver Dashboard',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+        title: Text(
+          AppStrings.t('caregiver_dashboard_title'),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         actions: [
           // Switch patient button
           IconButton(
             icon: const Icon(Icons.people, color: Colors.white, size: 28),
-            tooltip: 'Switch Patient',
+            tooltip: AppStrings.t('switch_patient_tooltip'),
             onPressed: () {
               Navigator.pushNamed(context, AppRoutes.patientSelector);
             },
@@ -151,7 +154,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Patient: ${_patientName ?? "Unknown"}',
+                              '${AppStrings.t('patient_label')}: ${_patientName ?? "Unknown"}',
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -160,7 +163,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Logged in as: ${currentUser?.email ?? "Unknown"}',
+                              '${AppStrings.t('logged_in_as')}: ${currentUser?.email ?? "Unknown"}',
                               style: const TextStyle(fontSize: 16, color: Color(0xFF666666)),
                             ),
                           ],
@@ -186,8 +189,8 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Recommendation',
+                                Text(
+                                  AppStrings.t('recommendation_label'),
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -196,9 +199,22 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  _getRecommendation(),
-                                  style: const TextStyle(fontSize: 16, color: Color(0xFF388E3C)),
+                                  _recommendation == null
+                                      ? 'No sessions yet — encourage the patient to play their first game.'
+                                      : 'Try: ${_recommendation!.gameLabel}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF388E3C),
+                                  ),
                                 ),
+                                if (_recommendation?.reason.isNotEmpty ?? false) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _recommendation!.reason,
+                                    style: const TextStyle(fontSize: 14, color: Color(0xFF558B5F)),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -262,9 +278,9 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                     // not just a raw list. Only shown when there's enough
                     // data to make a trend meaningful.
                     if (_sessions.length >= 2) ...[
-                      const Text(
-                        'Accuracy Trend',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      Text(
+                        AppStrings.t('accuracy_trend'),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
                       ),
                       const SizedBox(height: 12),
                       _buildAccuracyChart(),
@@ -272,18 +288,18 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                     ],
 
                     // Session history
-                    const Text(
-                      'Session History',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                    Text(
+                      AppStrings.t('session_history'),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
                     ),
                     const SizedBox(height: 12),
 
                     if (_sessions.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Text(
-                          'No sessions recorded yet.',
-                          style: TextStyle(fontSize: 16, color: Color(0xFF666666)),
+                          AppStrings.t('no_sessions_yet'),
+                          style: const TextStyle(fontSize: 16, color: Color(0xFF666666)),
                         ),
                       )
                     else
@@ -325,15 +341,16 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text(
-                          'Switch to Patient Mode',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        child: Text(
+                          AppStrings.t('switch_to_patient_mode'),
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
+      ),
       ),
     );
   }
@@ -415,6 +432,8 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
         return 'Daily Routine';
       case 'attention_focus_ner':
         return 'Spot the Difference';
+      case 'trip_itinerary_recall_ner':
+        return 'Trip Itinerary';
       default:
         return gameType;
     }
@@ -429,6 +448,8 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
         return Icons.checklist;
       case 'attention_focus_ner':
         return Icons.visibility;
+      case 'trip_itinerary_recall_ner':
+        return Icons.map;
       default:
         return Icons.videogame_asset;
     }

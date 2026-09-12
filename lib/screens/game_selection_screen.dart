@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/app_routes.dart';
+import '../services/language_service.dart';
+import '../utils/app_strings.dart';
 
 /// GameSelectionScreen shows available games for patients to play
 /// Features large, colorful cards with game names and descriptions
@@ -9,13 +11,17 @@ class GameSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // FIX: wrapped in ListenableBuilder so this screen's translated text
+    // rebuilds when the language changes.
+    return ListenableBuilder(
+      listenable: languageService,
+      builder: (context, _) => Scaffold(
       backgroundColor: const Color(0xFFFFF8E1), // Consistent warm background
       appBar: AppBar(
         backgroundColor: const Color(0xFF4CAF50),
-        title: const Text(
-          'Select a Game',
-          style: TextStyle(
+        title: Text(
+          AppStrings.t('select_a_game'),
+          style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -36,9 +42,9 @@ class GameSelectionScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header text
-              const Text(
-                'Choose a game to play:',
-                style: TextStyle(
+              Text(
+                AppStrings.t('choose_game_to_play'),
+                style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF333333),
@@ -54,8 +60,8 @@ class GameSelectionScreen extends StatelessWidget {
                     // Memory Match Game
                     _buildGameCard(
                       context,
-                      title: 'Memory Match',
-                      description: 'Find matching pairs of cards',
+                      title: AppStrings.t('memory_match_title'),
+                      description: AppStrings.t('memory_match_desc'),
                       icon: Icons.style,
                       color: const Color(0xFFE91E63), // Pink
                       onTap: () {
@@ -67,8 +73,8 @@ class GameSelectionScreen extends StatelessWidget {
                     // Trip Itinerary Recall Game
                     _buildGameCard(
                       context,
-                      title: 'Trip Itinerary',
-                      description: 'Remember your trip through the North East',
+                      title: AppStrings.t('trip_itinerary_title'),
+                      description: AppStrings.t('trip_itinerary_desc'),
                       icon: Icons.luggage,
                       color: const Color(0xFF3F51B5), // Indigo
                       onTap: () {
@@ -80,8 +86,8 @@ class GameSelectionScreen extends StatelessWidget {
                     // Daily Routine Recall Game
                     _buildGameCard(
                       context,
-                      title: 'Daily Routine',
-                      description: 'Arrange your daily activities in order',
+                      title: AppStrings.t('daily_routine_title'),
+                      description: AppStrings.t('daily_routine_desc'),
                       icon: Icons.checklist,
                       color: const Color(0xFF9C27B0), // Purple
                       onTap: () {
@@ -93,8 +99,8 @@ class GameSelectionScreen extends StatelessWidget {
                     // Attention & Concentration Game
                     _buildGameCard(
                       context,
-                      title: 'Spot the Difference',
-                      description: 'Find the tile that looks different',
+                      title: AppStrings.t('spot_difference_title'),
+                      description: AppStrings.t('spot_difference_desc'),
                       icon: Icons.visibility,
                       color: const Color(0xFFFF5722), // Deep Orange
                       onTap: () {
@@ -107,8 +113,8 @@ class GameSelectionScreen extends StatelessWidget {
                     // Personal Memories Game
                     _buildGameCard(
                       context,
-                      title: 'Personal Memories',
-                      description: 'Look at personal photos and share memories',
+                      title: AppStrings.t('personal_memories_title'),
+                      description: AppStrings.t('personal_memories_desc'),
                       icon: Icons.photo_album,
                       color: const Color(0xFF795548), // Brown — warm, personal
                       onTap: () {
@@ -121,12 +127,12 @@ class GameSelectionScreen extends StatelessWidget {
                     // Number Sequence Game
                     _buildGameCard(
                       context,
-                      title: 'Number Sequence',
-                      description: 'Complete the number pattern',
+                      title: AppStrings.t('number_sequence_title'),
+                      description: AppStrings.t('number_sequence_desc'),
                       icon: Icons.format_list_numbered,
                       color: const Color(0xFF009688), // Teal
                       onTap: () {
-                        _showComingSoonMessage(context, 'Number Sequence');
+                        _showComingSoonMessage(context, AppStrings.t('number_sequence_title'));
                       },
                     ),
                     
@@ -137,6 +143,7 @@ class GameSelectionScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import '../models/session_model.dart';
+import 'language_service.dart';
 
 /// DifficultyEngine - AI Adaptive Difficulty System
 /// 
@@ -126,50 +127,77 @@ class DifficultyEngine {
   
   /// Get user-friendly message for difficulty change
   /// This makes the AI logic visible and explainable to users/caregivers
+  ///
+  /// [languageCode] is optional and defaults to English, so existing
+  /// callers that don't pass it (Daily Routine, Attention Focus) keep
+  /// working exactly as before. Only Assamese is translated right now
+  /// (per scope) — any other language code falls back to English.
+  /// TODO: verify these Assamese translations with a native speaker.
   static String getDifficultyChangeMessage({
     required DifficultyLevel oldDifficulty,
     required DifficultyLevel newDifficulty,
+    String languageCode = LanguageService.english,
   }) {
+    final bool isAssamese = languageCode == LanguageService.assamese;
+
     if (newDifficulty == oldDifficulty) {
-      return 'Same difficulty level for next round - keep up the good work!';
+      return isAssamese
+          ? 'অহা ৰাউণ্ডটোৰ বাবে একেই কঠিনতাৰ স্তৰ - ভাল কাম অব্যাহত ৰাখক!'
+          : 'Same difficulty level for next round - keep up the good work!';
     }
-    
+
     if (oldDifficulty == DifficultyLevel.medium && newDifficulty == DifficultyLevel.hard) {
-      return 'Great job! Next round will be a bit harder.';
+      return isAssamese
+          ? 'বহুত ভাল! অহা ৰাউণ্ডটো অলপ কঠিন হ\'ব।'
+          : 'Great job! Next round will be a bit harder.';
     }
-    
+
     if (oldDifficulty == DifficultyLevel.medium && newDifficulty == DifficultyLevel.easy) {
-      return 'Let\'s try an easier round next time.';
+      return isAssamese
+          ? 'পিছৰ বাৰ এটা সহজ ৰাউণ্ড চেষ্টা কৰোঁ আহক।'
+          : 'Let\'s try an easier round next time.';
     }
-    
+
     if (oldDifficulty == DifficultyLevel.easy && newDifficulty == DifficultyLevel.medium) {
-      return 'Good progress! Moving to medium difficulty.';
+      return isAssamese
+          ? 'ভাল উন্নতি! মধ্যম কঠিনতালৈ গতি কৰি আছোঁ।'
+          : 'Good progress! Moving to medium difficulty.';
     }
-    
+
     if (oldDifficulty == DifficultyLevel.hard && newDifficulty == DifficultyLevel.medium) {
-      return 'Let\'s try medium difficulty next round.';
+      return isAssamese
+          ? 'অহা ৰাউণ্ডত মধ্যম কঠিনতা চেষ্টা কৰোঁ আহক।'
+          : 'Let\'s try medium difficulty next round.';
     }
-    
+
     if (oldDifficulty == DifficultyLevel.easy && newDifficulty == DifficultyLevel.hard) {
-      return 'Excellent progress! Jumping to hard difficulty.';
+      return isAssamese
+          ? 'উৎকৃষ্ট উন্নতি! কঠিন স্তৰলৈ যাওঁ আহক।'
+          : 'Excellent progress! Jumping to hard difficulty.';
     }
-    
+
     if (oldDifficulty == DifficultyLevel.hard && newDifficulty == DifficultyLevel.easy) {
-      return 'Let\'s start with easier rounds.';
+      return isAssamese
+          ? 'সহজ ৰাউণ্ডৰ পৰা আৰম্ভ কৰোঁ আহক।'
+          : 'Let\'s start with easier rounds.';
     }
-    
-    return 'Difficulty adjusted for next round.';
+
+    return isAssamese
+        ? 'অহা ৰাউণ্ডৰ বাবে কঠিনতা সাল-সলনি কৰা হৈছে।'
+        : 'Difficulty adjusted for next round.';
   }
   
-  /// Get descriptive name for difficulty level
-  static String getDifficultyName(DifficultyLevel level) {
+  /// Get descriptive name for difficulty level.
+  /// Same optional [languageCode] pattern as above.
+  static String getDifficultyName(DifficultyLevel level, {String languageCode = LanguageService.english}) {
+    final bool isAssamese = languageCode == LanguageService.assamese;
     switch (level) {
       case DifficultyLevel.easy:
-        return 'Easy';
+        return isAssamese ? 'সহজ' : 'Easy'; // TODO: verify
       case DifficultyLevel.medium:
-        return 'Medium';
+        return isAssamese ? 'মধ্যম' : 'Medium'; // TODO: verify
       case DifficultyLevel.hard:
-        return 'Hard';
+        return isAssamese ? 'কঠিন' : 'Hard'; // TODO: verify
     }
   }
 }

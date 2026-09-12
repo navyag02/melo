@@ -3,6 +3,8 @@ import '../models/personal_memory_model.dart';
 import '../services/personal_memory_service.dart';
 import '../services/patient_service.dart';
 import '../utils/app_routes.dart';
+import '../services/language_service.dart';
+import '../utils/app_strings.dart';
 
 /// PersonalMemoriesManageScreen — caregiver screen for managing
 /// personal memories (photos + questions) for a patient.
@@ -126,13 +128,17 @@ class _PersonalMemoriesManageScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // FIX: wrapped in ListenableBuilder so this screen rebuilds with
+    // translated text when the language changes.
+    return ListenableBuilder(
+      listenable: languageService,
+      builder: (context, _) => Scaffold(
       backgroundColor: const Color(0xFFFFF8E1),
       appBar: AppBar(
         backgroundColor: const Color(0xFF4CAF50),
-        title: const Text(
-          'Personal Memories',
-          style: TextStyle(
+        title: Text(
+          AppStrings.t('personal_memories_manage_title'),
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -156,9 +162,9 @@ class _PersonalMemoriesManageScreenState
               backgroundColor: const Color(0xFF4CAF50),
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add_photo_alternate, size: 28),
-              label: const Text(
-                'Add Memory',
-                style: TextStyle(
+              label: Text(
+                AppStrings.t('add_memory_button'),
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -173,6 +179,7 @@ class _PersonalMemoriesManageScreenState
                 : _memories.isEmpty
                     ? _buildEmptyState()
                     : _buildMemoryList(),
+      ),
       ),
     );
   }
@@ -198,9 +205,9 @@ class _PersonalMemoriesManageScreenState
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'No Patient Selected',
-              style: TextStyle(
+            Text(
+              AppStrings.t('no_patient_selected'),
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF333333),
@@ -227,9 +234,9 @@ class _PersonalMemoriesManageScreenState
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Select Patient',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                child: Text(
+                  AppStrings.t('select_patient_button'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -260,9 +267,9 @@ class _PersonalMemoriesManageScreenState
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'No Memories Yet',
-              style: TextStyle(
+            Text(
+              AppStrings.t('no_memories_yet'),
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF333333),
@@ -287,9 +294,9 @@ class _PersonalMemoriesManageScreenState
                   _loadData();
                 },
                 icon: const Icon(Icons.add_photo_alternate, size: 28),
-                label: const Text(
-                  'Add First Memory',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                label: Text(
+                  AppStrings.t('add_first_memory_button'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4CAF50),
@@ -453,9 +460,9 @@ class _PersonalMemoriesManageScreenState
                         size: 20,
                         color: Color(0xFF4CAF50),
                       ),
-                      label: const Text(
-                        'Edit',
-                        style: TextStyle(
+                      label: Text(
+                        AppStrings.t('edit_button'),
+                        style: const TextStyle(
                           fontSize: 16,
                           color: Color(0xFF4CAF50),
                         ),
@@ -470,9 +477,9 @@ class _PersonalMemoriesManageScreenState
                         size: 20,
                         color: Colors.red,
                       ),
-                      label: const Text(
-                        'Delete',
-                        style: TextStyle(
+                      label: Text(
+                        AppStrings.t('delete_button'),
+                        style: const TextStyle(
                           fontSize: 16,
                           color: Colors.red,
                         ),

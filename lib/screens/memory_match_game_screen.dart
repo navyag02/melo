@@ -4,6 +4,8 @@ import '../services/firestore_service.dart';
 import '../models/session_model.dart';
 import '../services/difficulty_engine.dart';
 import '../services/patient_service.dart';
+import '../services/language_service.dart';
+import '../utils/app_strings.dart';
 
 /// MemoryMatchGameScreen - A cultural memory matching game themed around
 /// North Eastern Region (NER) of India
@@ -60,7 +62,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Bihu Dance',
       regionalName: 'বিহু নৃত্য', // Assamese - TODO: verify translation
       icon: Icons.music_note, // used only if imagePath is null
-      imagePath: 'assets/images/bihu.jpeg', // TODO: add this file
+      imagePath: 'assets/images/bihu.png', // TODO: add this file
       color: Colors.red,
       description: 'Traditional Assamese dance',
     ),
@@ -69,7 +71,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Hornbill',
       regionalName: 'হৰ্নিল', // Assamese approximation - TODO: verify translation
       icon: Icons.flutter_dash,
-      imagePath: 'assets/images/hornbill.jpeg', // TODO: add this file
+      imagePath: 'assets/images/hornbill.png', // TODO: add this file
       color: Colors.green,
       description: 'State bird of Nagaland',
     ),
@@ -78,7 +80,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Bamboo Craft',
       regionalName: 'বাঁহ শিল্প', // Assamese - TODO: verify translation
       icon: Icons.grass,
-      imagePath: 'assets/images/bamboo.jpeg', // TODO: add this file
+      imagePath: 'assets/images/bamboo.png', // TODO: add this file
       color: Colors.lightGreen,
       description: 'Traditional bamboo handicrafts',
     ),
@@ -87,7 +89,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Tea Garden',
       regionalName: 'চাহ বাগিছা', // Assamese - TODO: verify translation
       icon: Icons.local_florist,
-      imagePath: 'assets/images/tea.jpeg', // TODO: add this file
+      imagePath: 'assets/images/tea.png', // TODO: add this file
       color: Colors.brown,
       description: 'Assam tea gardens',
     ),
@@ -96,7 +98,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Root Bridge',
       regionalName: 'শিপা সেতু', // Assamese approximation - TODO: verify translation
       icon: Icons.water,
-      imagePath: 'assets/images/bridge.jpeg', // TODO: add this file
+      imagePath: 'assets/images/bridge.png', // TODO: add this file
       color: Colors.amber,
       description: 'Living root bridges of Meghalaya',
     ),
@@ -105,7 +107,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Traditional Textile',
       regionalName: 'আদৰৰ কাপোৰ', // Assamese - TODO: verify translation
       icon: Icons.checkroom,
-      imagePath: 'assets/images/textile.jpeg', // TODO: add this file
+      imagePath: 'assets/images/textile.png', // TODO: add this file
       color: Colors.purple,
       description: 'NER handloom textiles',
     ),
@@ -149,7 +151,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
     totalPairs = DifficultyEngine.getPairsForDifficulty(currentDifficulty);
     
     // STEP 4: Generate initial difficulty message (will be updated after round completes)
-    difficultyChangeMessage = 'Current difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty)}';
+    difficultyChangeMessage = 'Current difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty, languageCode: languageService.currentLanguage)}';
     
     print('Adaptive Difficulty Engine: Starting game with ${DifficultyEngine.getDifficultyName(currentDifficulty)}');
     print('Adaptive Difficulty Engine: Total pairs: $totalPairs');
@@ -310,6 +312,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
     difficultyChangeMessage = DifficultyEngine.getDifficultyChangeMessage(
       oldDifficulty: currentDifficulty,
       newDifficulty: nextDifficulty,
+      languageCode: languageService.currentLanguage,
     );
     
     print('Adaptive Difficulty Engine: Session completed with ${(accuracy * 100).toStringAsFixed(1)}% accuracy');
@@ -381,7 +384,11 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // FIX: wrapped in ListenableBuilder so this screen rebuilds with
+    // translated text when the language changes.
+    return ListenableBuilder(
+      listenable: languageService,
+      builder: (context, _) => Scaffold(
       backgroundColor: const Color(0xFFFFF8E1), // Consistent warm background
       appBar: AppBar(
         backgroundColor: const Color(0xFF4CAF50),
@@ -419,6 +426,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
         child: gameCompleted
             ? _buildRoundCompleteScreen()
             : _buildGameScreen(),
+      ),
       ),
     );
   }
@@ -787,9 +795,9 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
           const SizedBox(height: 32),
           
           // Congratulations text
-          const Text(
-            'Round Complete!',
-            style: TextStyle(
+          Text(
+            AppStrings.t('round_complete'),
+            style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
               color: Color(0xFF333333),
@@ -813,11 +821,11 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
             ),
             child: Column(
               children: [
-                _buildResultRow('Score', '$score', Icons.star, Colors.amber),
+                _buildResultRow(AppStrings.t('score_label'), '$score', Icons.star, Colors.amber),
                 const SizedBox(height: 16),
-                _buildResultRow('Moves', '$moves', Icons.touch_app, Colors.blue),
+                _buildResultRow(AppStrings.t('moves_label'), '$moves', Icons.touch_app, Colors.blue),
                 const SizedBox(height: 16),
-                _buildResultRow('Time', _formatTime(stopwatch.elapsed), Icons.timer, Colors.green),
+                _buildResultRow(AppStrings.t('time_label'), _formatTime(stopwatch.elapsed), Icons.timer, Colors.green),
                 const SizedBox(height: 16),
                 // FIX: patients no longer see a raw accuracy percentage —
                 // that number can feel discouraging. They see encouraging,
@@ -825,7 +833,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
                 // still saved to Firestore for the difficulty engine and
                 // the caregiver dashboard, which does show exact numbers.
                 _buildResultRow(
-                  'How you did',
+                  AppStrings.t('how_you_did_label'),
                   _encouragingLabel(accuracy),
                   Icons.favorite,
                   Colors.purple,
@@ -855,9 +863,9 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'AI Adaptive Difficulty',
-                        style: TextStyle(
+                      Text(
+                        AppStrings.t('ai_adaptive_difficulty_label'),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2E7D32),
@@ -898,7 +906,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
                     ),
                   ),
                   child: Text(
-                    'Play Again (${DifficultyEngine.getPairsForDifficulty(nextDifficulty)} pairs)',
+                    '${AppStrings.t('play_again_button')} (${DifficultyEngine.getPairsForDifficulty(nextDifficulty)} pairs)',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -917,9 +925,9 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Back to Menu',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  child: Text(
+                    AppStrings.t('back_to_menu_button'),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -1113,9 +1121,9 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
   /// still saved to Firestore for the difficulty engine and the
   /// caregiver dashboard.
   String _encouragingLabel(double accuracy) {
-    if (accuracy >= 0.8) return 'Wonderful!';
-    if (accuracy >= 0.5) return 'Well Done!';
-    return 'Good Try!';
+    if (accuracy >= 0.8) return AppStrings.t('wonderful_label');
+    if (accuracy >= 0.5) return AppStrings.t('well_done_label');
+    return AppStrings.t('good_try_label');
   }
 }
 
