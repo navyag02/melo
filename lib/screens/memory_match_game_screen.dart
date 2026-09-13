@@ -38,6 +38,11 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
   int totalPairs = 6; // Will be set by adaptive difficulty engine
   Stopwatch stopwatch = Stopwatch();
   bool gameCompleted = false;
+  // FIX: this game had no loading state at all, so tapping Play Again
+  // (which re-runs _initializeGame) showed zero visual feedback and the
+  // complete screen stayed on-screen with no change until (or unless)
+  // the async work finished.
+  bool isLoading = true;
 
   // Adaptive difficulty state
   DifficultyLevel currentDifficulty = DifficultyLevel.medium;
@@ -62,7 +67,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Bihu Dance',
       regionalName: 'বিহু নৃত্য', // Assamese - TODO: verify translation
       icon: Icons.music_note, // used only if imagePath is null
-      imagePath: 'assets/images/bihu.png', // TODO: add this file
+      imagePath: 'assets/images/bihu.jpeg', // TODO: add this file
       color: Colors.red,
       description: 'Traditional Assamese dance',
     ),
@@ -71,7 +76,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Hornbill',
       regionalName: 'হৰ্নিল', // Assamese approximation - TODO: verify translation
       icon: Icons.flutter_dash,
-      imagePath: 'assets/images/hornbill.png', // TODO: add this file
+      imagePath: 'assets/images/hornbill.jpeg', // TODO: add this file
       color: Colors.green,
       description: 'State bird of Nagaland',
     ),
@@ -80,7 +85,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Bamboo Craft',
       regionalName: 'বাঁহ শিল্প', // Assamese - TODO: verify translation
       icon: Icons.grass,
-      imagePath: 'assets/images/bamboo.png', // TODO: add this file
+      imagePath: 'assets/images/bamboo.jpeg', // TODO: add this file
       color: Colors.lightGreen,
       description: 'Traditional bamboo handicrafts',
     ),
@@ -89,7 +94,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Tea Garden',
       regionalName: 'চাহ বাগিছা', // Assamese - TODO: verify translation
       icon: Icons.local_florist,
-      imagePath: 'assets/images/tea.png', // TODO: add this file
+      imagePath: 'assets/images/tea.jpeg', // TODO: add this file
       color: Colors.brown,
       description: 'Assam tea gardens',
     ),
@@ -98,7 +103,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Root Bridge',
       regionalName: 'শিপা সেতু', // Assamese approximation - TODO: verify translation
       icon: Icons.water,
-      imagePath: 'assets/images/bridge.png', // TODO: add this file
+      imagePath: 'assets/images/bridge.jpeg', // TODO: add this file
       color: Colors.amber,
       description: 'Living root bridges of Meghalaya',
     ),
@@ -107,7 +112,7 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
       name: 'Traditional Textile',
       regionalName: 'আদৰৰ কাপোৰ', // Assamese - TODO: verify translation
       icon: Icons.checkroom,
-      imagePath: 'assets/images/textile.png', // TODO: add this file
+      imagePath: 'assets/images/textile.jpeg', // TODO: add this file
       color: Colors.purple,
       description: 'NER handloom textiles',
     ),
@@ -125,51 +130,81 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
   /// Initialize the game with adaptive difficulty
   /// This is where our AI adaptive difficulty engine comes into play
   Future<void> _initializeGame() async {
-    // STEP 0 (FIX): Load the actual selected patient ID from local storage.
-    // This was previously skipped, so every session saved under a fake
-    // placeholder ID and the difficulty engine could never see real history.
-    _patientId = await _patientService.getSelectedPatientId();
-    if (_patientId == null) {
-      // No patient selected yet — this shouldn't normally happen since the
-      // caregiver flow selects a patient before reaching this screen, but
-      // we fall back safely instead of crashing.
-      print('Warning: No patient selected. Using fallback ID for this session.');
-      _patientId = 'unknown_patient';
-    }
-
-    // STEP 1: Calculate appropriate difficulty using the AI engine
-    List<SessionModel> recentSessions = await _getRecentSessions();
-    nextDifficulty = DifficultyEngine.calculateNextDifficulty(
-      recentSessions: recentSessions,
-      currentDifficulty: currentDifficulty,
-    );
-    
-    // STEP 2: Use the nextDifficulty as the current difficulty for this round
-    currentDifficulty = nextDifficulty;
-    
-    // STEP 3: Get the number of pairs for the calculated difficulty
-    totalPairs = DifficultyEngine.getPairsForDifficulty(currentDifficulty);
-    
-    // STEP 4: Generate initial difficulty message (will be updated after round completes)
-    difficultyChangeMessage = 'Current difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty, languageCode: languageService.currentLanguage)}';
-    
-    print('Adaptive Difficulty Engine: Starting game with ${DifficultyEngine.getDifficultyName(currentDifficulty)}');
-    print('Adaptive Difficulty Engine: Total pairs: $totalPairs');
-    print('Adaptive Difficulty Engine: Recent sessions analyzed: ${recentSessions.length}');
-    
-    // STEP 5: Create cards based on the calculated difficulty
-    _createCardsForDifficulty();
-    
-    // STEP 6: Reset game state
+    // FIX: show loading immediately and clear gameCompleted BEFORE the
+    // async work, same fix as the other two games — see comment on
+    // isLoading above.
     setState(() {
-      moves = 0;
-      matchesFound = 0;
-      flippedCards = [];
-      isCheckingMatch = false;
+      isLoading = true;
       gameCompleted = false;
-      stopwatch.reset();
-      stopwatch.start();
     });
+
+    try {
+      // STEP 0 (FIX): Load the actual selected patient ID from local storage.
+      // This was previously skipped, so every session saved under a fake
+      // placeholder ID and the difficulty engine could never see real history.
+      _patientId = await _patientService.getSelectedPatientId();
+      if (_patientId == null) {
+        // No patient selected yet — this shouldn't normally happen since the
+        // caregiver flow selects a patient before reaching this screen, but
+        // we fall back safely instead of crashing.
+        print('Warning: No patient selected. Using fallback ID for this session.');
+        _patientId = 'unknown_patient';
+      }
+
+      // STEP 1: Calculate appropriate difficulty using the AI engine
+      List<SessionModel> recentSessions = await _getRecentSessions();
+      nextDifficulty = DifficultyEngine.calculateNextDifficulty(
+        recentSessions: recentSessions,
+        currentDifficulty: currentDifficulty,
+      );
+
+      // STEP 2: Use the nextDifficulty as the current difficulty for this round
+      currentDifficulty = nextDifficulty;
+
+      // STEP 3: Get the number of pairs for the calculated difficulty
+      totalPairs = DifficultyEngine.getPairsForDifficulty(currentDifficulty);
+
+      // STEP 4: Generate initial difficulty message (will be updated after round completes)
+      difficultyChangeMessage = 'Current difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty, languageCode: languageService.currentLanguage)}';
+
+      print('Adaptive Difficulty Engine: Starting game with ${DifficultyEngine.getDifficultyName(currentDifficulty)}');
+      print('Adaptive Difficulty Engine: Total pairs: $totalPairs');
+      print('Adaptive Difficulty Engine: Recent sessions analyzed: ${recentSessions.length}');
+
+      // STEP 5: Create cards based on the calculated difficulty
+      _createCardsForDifficulty();
+
+      // STEP 6: Reset game state
+      setState(() {
+        moves = 0;
+        matchesFound = 0;
+        flippedCards = [];
+        isCheckingMatch = false;
+        gameCompleted = false;
+        isLoading = false;
+        stopwatch.reset();
+        stopwatch.start();
+      });
+    } catch (e) {
+      // FIX: never leave the screen stuck on the previous results —
+      // fall back to a safe default (medium difficulty) instead.
+      print('Error initializing memory match game, using defaults: $e');
+      _patientId ??= 'unknown_patient';
+      currentDifficulty = DifficultyLevel.medium;
+      totalPairs = DifficultyEngine.getPairsForDifficulty(currentDifficulty);
+      difficultyChangeMessage = 'Current difficulty: ${DifficultyEngine.getDifficultyName(currentDifficulty, languageCode: languageService.currentLanguage)}';
+      _createCardsForDifficulty();
+      setState(() {
+        moves = 0;
+        matchesFound = 0;
+        flippedCards = [];
+        isCheckingMatch = false;
+        gameCompleted = false;
+        isLoading = false;
+        stopwatch.reset();
+        stopwatch.start();
+      });
+    }
   }
 
   /// Create cards based on the current difficulty level
@@ -423,9 +458,11 @@ class _MemoryMatchGameState extends State<MemoryMatchGameScreen>
         ],
       ),
       body: SafeArea(
-        child: gameCompleted
-            ? _buildRoundCompleteScreen()
-            : _buildGameScreen(),
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : gameCompleted
+                ? _buildRoundCompleteScreen()
+                : _buildGameScreen(),
       ),
       ),
     );

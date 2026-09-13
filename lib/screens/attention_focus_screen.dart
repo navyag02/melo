@@ -70,31 +70,58 @@ class _AttentionFocusScreenState extends State<AttentionFocusScreen> {
   }
 
   Future<void> _initializeSession() async {
-    _patientId = await _patientService.getSelectedPatientId();
-    _patientId ??= 'unknown_patient';
-
-    final recentSessions = await _firestoreService.getRecentSessionsForGame(
-      _patientId!,
-      'attention_focus_ner',
-      limit: 3,
-    );
-
-    final nextDifficulty = DifficultyEngine.calculateNextDifficulty(
-      recentSessions: recentSessions,
-      currentDifficulty: _currentDifficulty,
-    );
-
+    // FIX: show the loading state and clear the "complete" screen
+    // IMMEDIATELY, before any async work. Previously these only flipped
+    // at the very end, so tapping Play Again showed zero visual change
+    // until the Firestore calls finished — and if they ever threw, the
+    // screen stayed stuck on the results screen forever.
     setState(() {
-      _previousDifficulty = _currentDifficulty;
-      _currentDifficulty = nextDifficulty;
-      _gridSize = _tileCountForDifficulty(_currentDifficulty);
-      _roundIndex = 0;
-      _correctCount = 0;
-      _isLoading = false;
+      _isLoading = true;
       _sessionComplete = false;
-      _startTime = DateTime.now();
     });
-    _setupRound();
+
+    try {
+      _patientId = await _patientService.getSelectedPatientId();
+      _patientId ??= 'unknown_patient';
+
+      final recentSessions = await _firestoreService.getRecentSessionsForGame(
+        _patientId!,
+        'attention_focus_ner',
+        limit: 3,
+      );
+
+      final nextDifficulty = DifficultyEngine.calculateNextDifficulty(
+        recentSessions: recentSessions,
+        currentDifficulty: _currentDifficulty,
+      );
+
+      setState(() {
+        _previousDifficulty = _currentDifficulty;
+        _currentDifficulty = nextDifficulty;
+        _gridSize = _tileCountForDifficulty(_currentDifficulty);
+        _roundIndex = 0;
+        _correctCount = 0;
+        _isLoading = false;
+        _sessionComplete = false;
+        _startTime = DateTime.now();
+      });
+      _setupRound();
+    } catch (e) {
+      // FIX: never leave the screen stuck — fall back to a safe default
+      // (medium difficulty, fresh round) instead of hanging forever.
+      print('Error initializing attention focus session, using defaults: $e');
+      _patientId ??= 'unknown_patient';
+      setState(() {
+        _currentDifficulty = DifficultyLevel.medium;
+        _gridSize = _tileCountForDifficulty(_currentDifficulty);
+        _roundIndex = 0;
+        _correctCount = 0;
+        _isLoading = false;
+        _sessionComplete = false;
+        _startTime = DateTime.now();
+      });
+      _setupRound();
+    }
   }
 
   void _setupRound() {

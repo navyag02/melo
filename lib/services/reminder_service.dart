@@ -119,7 +119,7 @@ class ReminderService {
       scheduledTime,
       notificationDetails,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time, // repeat daily
     );
   }

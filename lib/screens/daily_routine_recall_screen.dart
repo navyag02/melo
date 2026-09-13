@@ -81,33 +81,55 @@ class _DailyRoutineRecallScreenState extends State<DailyRoutineRecallScreen> {
   }
 
   Future<void> _initializeGame() async {
-    _patientId = await _patientService.getSelectedPatientId();
-    _patientId ??= 'unknown_patient';
-
-    // Reuse the same rule-based difficulty engine, fed with this game's
-    // own session history (separate gameType from memory matching).
-    final recentSessions = await _firestoreService.getRecentSessionsForGame(
-      _patientId!,
-      'daily_routine_recall_ner',
-      limit: 3,
-    );
-
-    final nextDifficulty = DifficultyEngine.calculateNextDifficulty(
-      recentSessions: recentSessions,
-      currentDifficulty: _currentDifficulty,
-    );
-
+    // FIX: same issue as attention_focus_screen — show loading state and
+    // clear _roundComplete BEFORE the async work, and never let a thrown
+    // error leave the screen stuck on the previous round's results.
     setState(() {
-      _previousDifficulty = _currentDifficulty;
-      _currentDifficulty = nextDifficulty;
-      final stepCount = _stepsForDifficulty(_currentDifficulty);
-      _correctOrder = _masterSequence.sublist(0, stepCount);
-      _shuffledSteps = List.of(_correctOrder)..shuffle(Random());
-      _selectedOrder = [];
-      _isLoading = false;
+      _isLoading = true;
       _roundComplete = false;
-      _startTime = DateTime.now();
     });
+
+    try {
+      _patientId = await _patientService.getSelectedPatientId();
+      _patientId ??= 'unknown_patient';
+
+      final recentSessions = await _firestoreService.getRecentSessionsForGame(
+        _patientId!,
+        'daily_routine_recall_ner',
+        limit: 3,
+      );
+
+      final nextDifficulty = DifficultyEngine.calculateNextDifficulty(
+        recentSessions: recentSessions,
+        currentDifficulty: _currentDifficulty,
+      );
+
+      setState(() {
+        _previousDifficulty = _currentDifficulty;
+        _currentDifficulty = nextDifficulty;
+        final stepCount = _stepsForDifficulty(_currentDifficulty);
+        _correctOrder = _masterSequence.sublist(0, stepCount);
+        _shuffledSteps = List.of(_correctOrder)..shuffle(Random());
+        _selectedOrder = [];
+        _isLoading = false;
+        _roundComplete = false;
+        _startTime = DateTime.now();
+      });
+    } catch (e) {
+      // FIX: fall back to a safe default instead of hanging forever.
+      print('Error initializing daily routine game, using defaults: $e');
+      _patientId ??= 'unknown_patient';
+      setState(() {
+        _currentDifficulty = DifficultyLevel.medium;
+        final stepCount = _stepsForDifficulty(_currentDifficulty);
+        _correctOrder = _masterSequence.sublist(0, stepCount);
+        _shuffledSteps = List.of(_correctOrder)..shuffle(Random());
+        _selectedOrder = [];
+        _isLoading = false;
+        _roundComplete = false;
+        _startTime = DateTime.now();
+      });
+    }
   }
 
   void _handleStepTap(_RoutineStep step) {

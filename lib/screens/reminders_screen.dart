@@ -64,6 +64,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   Future<void> _showAddReminderDialog() async {
     final titleController = TextEditingController();
     TimeOfDay selectedTime = const TimeOfDay(hour: 9, minute: 0);
+    bool isSaving = false;
 
     await showDialog(
       context: context,
@@ -106,27 +107,73 @@ class _RemindersScreenState extends State<RemindersScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: isSaving ? null : () => Navigator.pop(context),
               child: const Text('Cancel', style: TextStyle(fontSize: 16)),
             ),
             ElevatedButton(
-              onPressed: () async {
-                if (titleController.text.trim().isEmpty || _patientId == null) return;
+              // FIX: this button previously did a silent `return` if the
+              // title was empty or _patientId was null — with no feedback,
+              // it looked exactly like "the Add button does nothing."
+              // _patientId is null if the caregiver used "Skip to Patient
+              // Mode" during testing, bypassing patient selection.
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (titleController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a reminder title')),
+                        );
+                        return;
+                      }
 
-                final timeString =
-                    '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+                      if (_patientId == null) {
+                        Navigator.pop(context); // close the dialog first
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'No patient selected. Please select a patient before adding reminders.',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
 
-                final reminder = ReminderModel(
-                  patientId: _patientId!,
-                  title: titleController.text.trim(),
-                  time: timeString,
-                );
+                      setDialogState(() => isSaving = true);
 
-                await _reminderService.addReminder(reminder);
-                if (mounted) Navigator.pop(context);
-                _loadReminders();
-              },
-              child: const Text('Add', style: TextStyle(fontSize: 16)),
+                      final timeString =
+                          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+
+                      final reminder = ReminderModel(
+                        patientId: _patientId!,
+                        title: titleController.text.trim(),
+                        time: timeString,
+                      );
+
+                      try {
+                        await _reminderService.addReminder(reminder);
+                        if (mounted) Navigator.pop(context);
+                        _loadReminders();
+                      } catch (e) {
+                        // FIX: previously any failure here (e.g. notification
+                        // permission/scheduling issues) would leave the
+                        // dialog open with no explanation.
+                        print('Error adding reminder: $e');
+                        setDialogState(() => isSaving = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Could not add reminder: ${e.toString()}')),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Add', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),
